@@ -186,24 +186,30 @@
 
         // 1. Créer le document facture (copie des infos du devis, Type=facture)
         //    Source pointe vers le devis d'origine.
+        //    NB: BulkAddRecord attend une liste de valeurs par colonne.
+        //    On utilise un row_id négatif (-1) pour la facture : ce row_id est
+        //    résolu automatiquement par le moteur dans le même lot d'actions, ce
+        //    qui permet de référencer la facture dans les lignes sans dépendre
+        //    de la valeur de retour.
+        const factureId = -1;
         const factureFields = {
-          Type: 'facture',
-          Client: selectedDevis.Client || 0,
-          Projet: selectedDevis.Projet || 0,
-          Source: selectedDevis.id,
-          Objet: selectedDevis.Objet || '',
-          Conditions: selectedDevis.Conditions || '',
-          Mode_Paiement: selectedDevis.Mode_Paiement || '',
-          Date: today,
-          Date_Echeance: selectedDevis.Date_Echeance || addDays(today, 30),
+          Type: ['facture'],
+          Client: [selectedDevis.Client || 0],
+          Projet: [selectedDevis.Projet || 0],
+          Source: [selectedDevis.id],
+          Objet: [selectedDevis.Objet || ''],
+          Conditions: [selectedDevis.Conditions || ''],
+          Mode_Paiement: [selectedDevis.Mode_Paiement || ''],
+          Date: [today],
+          Date_Echeance: [selectedDevis.Date_Echeance || addDays(today, 30)],
         };
 
-        const addResult = await grist.docApi.applyUserActions([
-          ['BulkAddRecord', 'Documents', [null], factureFields]
-        ]);
-        const factureId = addResult[0].records[0].id;
+        // Lot atomique : créer la facture, copier ses lignes, accepter le devis.
+        const actions = [
+          ['BulkAddRecord', 'Documents', [factureId], factureFields],
+        ];
 
-        // 2. Copier les lignes du devis vers la facture
+        // 2. Copier les lignes du devis vers la facture (réf négative factureId)
         if (devisLines.length > 0) {
           const ids = devisLines.map(() => null);
           const lineFields = {
@@ -215,13 +221,13 @@
             TVA: devisLines.map(l => l.TVA || 0),
             Ordre: devisLines.map(l => l.Ordre || 0),
           };
-          await grist.docApi.applyUserActions([
-            ['BulkAddRecord', 'Lignes_Document', ids, lineFields]
-          ]);
+          actions.push(['BulkAddRecord', 'Lignes_Document', ids, lineFields]);
         }
 
-        // 3. Marquer le devis comme accepté
-        await grist.docApi.updateRecord('Documents', selectedDevis.id, { Statut: 'accepte' });
+        // 3. Marquer le devis comme accepté (même lot)
+        actions.push(['UpdateRecord', 'Documents', selectedDevis.id, { Statut: 'accepte' }]);
+
+        await grist.docApi.applyUserActions(actions);
 
         setStatus('✅ Facture créée avec succès (lignes et numérotation automatiques).');
       } catch (err) {
