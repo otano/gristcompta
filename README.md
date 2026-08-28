@@ -48,6 +48,5 @@ GRIST_WIDGET_URL="https://<url-publique>/creer_facture.html" uv run python confi
 
 ## Sécurité
 
-Aucun secret n'est committé : les scripts lisent `GRIST_API_TOKEN` depuis les
-variables d'environnement. Ne renseigne jamais le token dans un fichier suivi
-par git.
+les scripts lisent `GRIST_API_TOKEN` depuis les
+variables d'environnement.
