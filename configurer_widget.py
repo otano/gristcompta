@@ -70,13 +70,21 @@ def find_custom_section(view_id, title):
 
 
 def custom_options(url):
+    """Options d'une section custom.
+
+    Dans les options d'une vue, le champ `customView` est une *chaîne JSON*
+    imbriquée (et non un objet) : le client Grist appelle JSON.parse dessus.
+    """
     return {
-        "customView": {
+        "customView": json.dumps({
             "mode": "url",
             "url": url,
-            "renderAfterReady": True,
+            "widgetDef": None,
             "access": "full",
-        }
+            "pluginId": "",
+            "sectionId": "",
+            "renderAfterReady": True,
+        })
     }
 
 
