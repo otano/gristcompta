@@ -11,3 +11,6 @@ wheels/
 
 # Session files
 session-*.md
+
+# Local secrets
+.env
