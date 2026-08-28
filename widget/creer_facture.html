@@ -133,20 +133,26 @@
     // Données
     // ------------------------------------------------------------------
     async function loadDevisLines(devisId) {
-      const data = await grist.docApi.fetchTable('Lignes_Document', {
-        filters: { Document: [devisId] }
-      });
-      return columnarToRecords(data);
+      // Note : docApi.fetchTable ignore les options (filtres), il renvoie
+      // toute la table en valeurs brutes (rowIds pour les références).
+      // On filtre donc côté client.
+      const data = await grist.docApi.fetchTable('Lignes_Document');
+      return columnarToRecords(data).filter(l => l.Document === devisId);
+    }
+
+    // Charge le devis en valeurs brutes (les références Client/Projet sont des
+    // rowIds) — contrairement à onRecord qui fournit les valeurs affichées.
+    async function loadDevisBrut(devisId) {
+      const data = await grist.docApi.fetchTable('Documents');
+      return columnarToRecords(data).find(r => r.id === devisId) || null;
     }
 
     async function loadClientLabel(clientId) {
       const id = refToId(clientId);
       if (!id) return '—';
       try {
-        const data = await grist.docApi.fetchTable('Personnes', {
-          filters: { id: [id] }
-        });
-        const recs = columnarToRecords(data);
+        const data = await grist.docApi.fetchTable('Personnes');
+        const recs = columnarToRecords(data).filter(r => r.id === id);
         if (recs.length === 0) return '#' + id;
         const p = recs[0];
         return [p.Prenom, p.Nom].filter(Boolean).join(' ') || p.Email || ('#' + id);
@@ -159,10 +165,8 @@
       const id = refToId(projetId);
       if (!id) return '—';
       try {
-        const data = await grist.docApi.fetchTable('Projets', {
-          filters: { id: [id] }
-        });
-        const recs = columnarToRecords(data);
+        const data = await grist.docApi.fetchTable('Projets');
+        const recs = columnarToRecords(data).filter(r => r.id === id);
         return recs.length ? (recs[0].Nom || '#' + id) : ('#' + id);
       } catch (e) {
         return '#' + id;
@@ -279,8 +283,13 @@
     grist.ready({ columns: [] });
 
     grist.onRecord(async (record) => {
-      selectedDevis = record ? { id: record.id, ...record } : null;
-      devisLines = selectedDevis && selectedDevis.Type === 'devis'
+      // On recharge le devis en valeurs brutes : onRecord fournit les valeurs
+      // affichées (expandRefs), or on a besoin des rowIds pour dupliquer les
+      // références Client/Projet vers la facture.
+      selectedDevis = record && record.Type === 'devis'
+        ? await loadDevisBrut(record.id)
+        : (record ? { id: record.id, ...record } : null);
+      devisLines = selectedDevis
         ? await loadDevisLines(selectedDevis.id)
         : [];
       render();
