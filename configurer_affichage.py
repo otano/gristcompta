@@ -7,8 +7,13 @@ leur nom (et Prénom + Nom pour les personnes) au lieu de « Table(rowId) ».
 Ce script :
 1. Crée une colonne de formule `Nom_Complet` dans la table Personnes
    (= Prénom + Nom) si elle n'existe pas déjà.
-2. Positionne le champ `visibleCol` de chaque colonne de référence sur la
-   colonne de la table cible à utiliser comme libellé :
+2. Pour chaque colonne de référence, configure son libellé d'affichage :
+     - `visibleCol` (colonne de la table cible à utiliser comme libellé)
+     - `displayCol` via SetDisplayFormula (colonne cachée gristHelper_Display
+       dont la formule calcule la valeur affichée), indispensable pour que la
+       grille affiche le libellé au lieu du rowId.
+
+   Libellés :
      - toute référence → Personnes   : Nom_Complet
      - toute référence → Projets     : Nom
      - toute référence → Documents   : Numero
@@ -134,20 +139,30 @@ def main():
             print(f"⚠️  Impossible de résoudre le libellé pour {table}.{column}.")
             continue
 
-        # Idempotence : on applique seulement si différent
         current = columns[0]["fields"].get("visibleCol")
+        display_formula = f"${column}.{target_col}"
         if current == visible_col:
-            print(f"ℹ️  {table}.{column} → libellé déjà configuré.")
+            # Déjà configuré : s'assurer quand même que le displayCol existe.
+            ensure_display_formula(table, column, display_formula)
             continue
 
         actions.append(["ModifyColumn", table, column, {"visibleCol": visible_col}])
-        print(f"🔧 {table}.{column} → libellé id {visible_col}.")
+        actions.append([
+            "SetDisplayFormula", table, None, column, display_formula,
+        ])
+        print(f"🔧 {table}.{column} → libellé {target_col} (id {visible_col}).")
 
     if actions:
         apply(actions)
-        print(f"✅ {len(actions)} colonne(s) configurée(s).")
+        print(f"✅ {len(actions) // 2} colonne(s) configurée(s).")
     else:
         print("✅ Rien à faire.")
+
+
+def ensure_display_formula(table, column, formula):
+    """Crée/met à jour la colonne d'affichage (gristHelper_Display) si absente,
+    pour que la grille affiche le libellé au lieu du rowId."""
+    apply([["SetDisplayFormula", table, None, column, formula]])
 
 
 if __name__ == "__main__":
