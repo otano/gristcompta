@@ -104,6 +104,18 @@
       return 0;
     }
 
+    // Convertit une valeur de Date Grist en objet JS Date.
+    // Le widget API renvoie les dates comme ["d", timestamp] (secondes epoch),
+    // mais on peut aussi recevoir un timestamp (secondes) ou une string.
+    function toDateJS(value) {
+      if (value == null || value === '') { return null; }
+      if (Array.isArray(value) && value[0] === 'd' && typeof value[1] === 'number') {
+        return new Date(value[1] * 1000);
+      }
+      if (typeof value === 'number') { return new Date(value * 1000); }
+      return new Date(value);
+    }
+
     // Convertit un résultat columnar (objets {id: [], col: []}) en records.
     function columnarToRecords(cols) {
       const ids = cols.id || [];
@@ -212,9 +224,8 @@
         //    de la valeur de retour.
         const factureId = -1;
         const todayStr = toISODate(new Date());
-        const echeanceStr = selectedDevis.Date_Echeance
-          ? toISODate(new Date(selectedDevis.Date_Echeance))
-          : toISODate(addDays(new Date(), 30));
+        const echeanceDate = toDateJS(selectedDevis.Date_Echeance) || addDays(new Date(), 30);
+        const echeanceStr = toISODate(echeanceDate);
         const factureFields = {
           Type: ['facture'],
           Statut: ['envoye'],
