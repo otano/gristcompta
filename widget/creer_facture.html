@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Créer une facture depuis un devis</title>
+  <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+  <style>
+    :root {
+      --green: #16B378;
+      --dark: #1a1a1a;
+      --muted: #707070;
+      --border: #D9D9D9;
+      --bg: #fafafa;
+      --red: #b00020;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0; padding: 16px; background: var(--bg); color: var(--dark);
+    }
+    h1 { font-size: 17px; margin: 0 0 14px; }
+    .card {
+      border: 1px solid var(--border); border-radius: 8px; padding: 12px;
+      margin-bottom: 14px; background: #fff;
+    }
+    h2 { font-size: 13px; margin: 0 0 8px; color: var(--muted); font-weight: 600; text-transform: uppercase; }
+    .field { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; font-size: 13px; }
+    .field .k { color: var(--muted); }
+    .field .v { font-weight: 500; }
+    .empty { font-size: 14px; color: var(--muted); padding: 8px 0; }
+    .btn {
+      width: 100%; padding: 12px; border: none; border-radius: 6px; cursor: pointer;
+      font-size: 15px; font-weight: 600; background: var(--green); color: #fff;
+    }
+    .btn:disabled { background: #b7e5d2; cursor: not-allowed; }
+    .status { font-size: 13px; margin-top: 12px; min-height: 16px; }
+    .status.error { color: var(--red); }
+    .status.ok { color: var(--green); }
+    .status.info { color: var(--muted); }
+  </style>
+</head>
+<body>
+  <h1>Créer une facture depuis un devis</h1>
+
+  <div class="card" id="devisCard">
+    <h2>Devis sélectionné</h2>
+    <div id="devisEmpty" class="empty">
+      Aucun devis sélectionné.<br>
+      Sélectionnez un devis dans la vue « Devis », puis cliquez sur le bouton ci-dessous.
+    </div>
+    <div id="devisDetails" style="display:none;">
+      <div class="field"><span class="k">Numéro</span><span class="v" id="dNumero">&mdash;</span></div>
+      <div class="field"><span class="k">Client</span><span class="v" id="dClient">&mdash;</span></div>
+      <div class="field"><span class="k">Projet</span><span class="v" id="dProjet">&mdash;</span></div>
+      <div class="field"><span class="k">Total TTC</span><span class="v" id="dTotal">&mdash;</span></div>
+      <div class="field"><span class="k">Statut</span><span class="v" id="dStatut">&mdash;</span></div>
+      <div class="field"><span class="k">Lignes</span><span class="v" id="dLignes">&mdash;</span></div>
+    </div>
+  </div>
+
+  <button id="btn" class="btn" disabled>Créer la facture</button>
+  <div id="status" class="status info"></div>
+
+  <script>
+    let selectedDevis = null;   // record du devis sélectionné ({id, ...})
+    let devisLines = [];        // lignes du devis (records)
+
+    // ------------------------------------------------------------------
+    // Helpers
+    // ------------------------------------------------------------------
+    function setStatus(msg, type) {
+      const el = document.getElementById('status');
+      el.textContent = msg;
+      el.className = 'status' + (type ? ' ' + type : 'info');
+    }
+
+    function fmtCurrency(v) {
+      return (v == null ? '—' : Number(v).toFixed(2) + ' €');
+    }
+
+    function addDays(date, days) {
+      const d = new Date(date);
+      d.setDate(d.getDate() + days);
+      return d;
+    }
+
+    // Convertit un résultat columnar (objets {id: [], col: []}) en records.
+    function columnarToRecords(cols) {
+      const ids = cols.id || [];
+      const keys = Object.keys(cols).filter(k => k !== 'id');
+      return ids.map((id, i) => {
+        const rec = { id };
+        for (const k of keys) {
+          rec[k] = (cols[k] || [])[i];
+        }
+        return rec;
+      });
+    }
+
+    // ------------------------------------------------------------------
+    // Données
+    // ------------------------------------------------------------------
+    async function loadDevisLines(devisId) {
+      const data = await grist.docApi.fetchTable('Lignes_Document', {
+        filters: { Document: [devisId] }
+      });
+      return columnarToRecords(data);
+    }
+
+    async function loadClientLabel(clientId) {
+      if (!clientId) return '—';
+      try {
+        const data = await grist.docApi.fetchTable('Personnes', {
+          filters: { id: [clientId] }
+        });
+        const recs = columnarToRecords(data);
+        if (recs.length === 0) return '#' + clientId;
+        const p = recs[0];
+        return [p.Prenom, p.Nom].filter(Boolean).join(' ') || p.Email || ('#' + clientId);
+      } catch (e) {
+        return '#' + clientId;
+      }
+    }
+
+    async function loadProjetLabel(projetId) {
+      if (!projetId) return '—';
+      try {
+        const data = await grist.docApi.fetchTable('Projets', {
+          filters: { id: [projetId] }
+        });
+        const recs = columnarToRecords(data);
+        return recs.length ? (recs[0].Nom || '#' + projetId) : ('#' + projetId);
+      } catch (e) {
+        return '#' + projetId;
+      }
+    }
+
+    // ------------------------------------------------------------------
+    // Affichage
+    // ------------------------------------------------------------------
+    async function render() {
+      const emptyEl = document.getElementById('devisEmpty');
+      const detailsEl = document.getElementById('devisDetails');
+      const btn = document.getElementById('btn');
+
+      if (!selectedDevis || selectedDevis.Type !== 'devis') {
+        emptyEl.style.display = 'block';
+        detailsEl.style.display = 'none';
+        btn.disabled = true;
+        setStatus('Sélectionnez un devis dans la vue « Devis » pour créer sa facture.', 'info');
+        return;
+      }
+
+      emptyEl.style.display = 'none';
+      detailsEl.style.display = 'block';
+      document.getElementById('dNumero').textContent = selectedDevis.Numero || '—';
+      document.getElementById('dClient').textContent =
+        await loadClientLabel(selectedDevis.Client);
+      document.getElementById('dProjet').textContent =
+        await loadProjetLabel(selectedDevis.Projet);
+      document.getElementById('dTotal').textContent =
+        fmtCurrency(selectedDevis.Total_TTC);
+      document.getElementById('dStatut').textContent = selectedDevis.Statut || '—';
+      document.getElementById('dLignes').textContent = devisLines.length;
+
+      btn.disabled = false;
+      setStatus('Prêt. Cliquez pour créer la facture à partir de ce devis.', 'info');
+    }
+
+    // ------------------------------------------------------------------
+    // Action principale : créer la facture
+    // ------------------------------------------------------------------
+    async function createFacture() {
+      if (!selectedDevis || selectedDevis.Type !== 'devis') {
+        setStatus('Sélectionnez d\u2019abord un devis.', 'error');
+        return;
+      }
+
+      const btn = document.getElementById('btn');
+      btn.disabled = true;
+      setStatus('Création de la facture en cours...', 'info');
+
+      try {
+        const today = new Date();
+
+        // 1. Créer le document facture (copie des infos du devis, Type=facture)
+        //    Source pointe vers le devis d'origine.
+        const factureFields = {
+          Type: 'facture',
+          Client: selectedDevis.Client || 0,
+          Projet: selectedDevis.Projet || 0,
+          Source: selectedDevis.id,
+          Objet: selectedDevis.Objet || '',
+          Conditions: selectedDevis.Conditions || '',
+          Mode_Paiement: selectedDevis.Mode_Paiement || '',
+          Date: today,
+          Date_Echeance: selectedDevis.Date_Echeance || addDays(today, 30),
+        };
+
+        const addResult = await grist.docApi.applyUserActions([
+          ['BulkAddRecord', 'Documents', [null], factureFields]
+        ]);
+        const factureId = addResult[0].records[0].id;
+
+        // 2. Copier les lignes du devis vers la facture
+        if (devisLines.length > 0) {
+          const ids = devisLines.map(() => null);
+          const lineFields = {
+            Document: devisLines.map(() => factureId),
+            Description: devisLines.map(l => l.Description || ''),
+            Quantite: devisLines.map(l => l.Quantite == null ? 1 : l.Quantite),
+            Unite: devisLines.map(l => l.Unite || ''),
+            Prix_Unitaire_HT: devisLines.map(l => l.Prix_Unitaire_HT || 0),
+            TVA: devisLines.map(l => l.TVA || 0),
+            Ordre: devisLines.map(l => l.Ordre || 0),
+          };
+          await grist.docApi.applyUserActions([
+            ['BulkAddRecord', 'Lignes_Document', ids, lineFields]
+          ]);
+        }
+
+        // 3. Marquer le devis comme accepté
+        await grist.docApi.updateRecord('Documents', selectedDevis.id, { Statut: 'accepte' });
+
+        setStatus('✅ Facture créée avec succès (lignes et numérotation automatiques).');
+      } catch (err) {
+        console.error(err);
+        setStatus('Erreur : ' + (err.message || err), 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    // ------------------------------------------------------------------
+    // Initialisation
+    // ------------------------------------------------------------------
+    grist.ready({ columns: [] });
+
+    grist.onRecord(async (record) => {
+      selectedDevis = record ? { id: record.id, ...record } : null;
+      devisLines = selectedDevis && selectedDevis.Type === 'devis'
+        ? await loadDevisLines(selectedDevis.id)
+        : [];
+      render();
+    });
+
+    document.getElementById('btn').addEventListener('click', createFacture);
+  </script>
+</body>
+</html>
