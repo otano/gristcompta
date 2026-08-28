@@ -28,7 +28,7 @@ H = {"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json"}
 # URL publique où est hébergé widget/creer_facture.html.
 WIDGET_URL = os.environ.get(
     "GRIST_WIDGET_URL",
-    "https://REMPLACER_PAR_L_URL_PUBLIQUE/creer_facture.html",
+    "https://otano.github.io/gristcompta/widget/creer_facture.html",
 )
 
 SECTION_TITLE = "Créer une facture depuis un devis"
@@ -116,7 +116,7 @@ def main():
     # Configurer les options customView
     update_section_options(section_id, SECTION_TITLE, WIDGET_URL)
     print("✅ Options customView configurées (accès complet).")
-    print("ℹ️  Lancez la fonction GRIST_WIDGET_URL pour utiliser l'URL réelle.")
+    print(f"ℹ️  URL du widget : {WIDGET_URL}")
 
 
 def update_section_options(section_id, title, url):
