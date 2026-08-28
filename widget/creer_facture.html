@@ -94,6 +94,16 @@
       return y + '-' + m + '-' + d;
     }
 
+    // Extrait le rowId d'une valeur de référence.
+    // Le widget API renvoie parfois les références comme objet {rowId, tableId},
+    // parfois comme un simple int. Normalise en int (0 si référence vide).
+    function refToId(ref) {
+      if (ref == null || ref === 0) { return 0; }
+      if (typeof ref === 'number') { return ref; }
+      if (typeof ref === 'object' && ref.rowId != null) { return ref.rowId; }
+      return 0;
+    }
+
     // Convertit un résultat columnar (objets {id: [], col: []}) en records.
     function columnarToRecords(cols) {
       const ids = cols.id || [];
@@ -118,30 +128,32 @@
     }
 
     async function loadClientLabel(clientId) {
-      if (!clientId) return '—';
+      const id = refToId(clientId);
+      if (!id) return '—';
       try {
         const data = await grist.docApi.fetchTable('Personnes', {
-          filters: { id: [clientId] }
+          filters: { id: [id] }
         });
         const recs = columnarToRecords(data);
-        if (recs.length === 0) return '#' + clientId;
+        if (recs.length === 0) return '#' + id;
         const p = recs[0];
-        return [p.Prenom, p.Nom].filter(Boolean).join(' ') || p.Email || ('#' + clientId);
+        return [p.Prenom, p.Nom].filter(Boolean).join(' ') || p.Email || ('#' + id);
       } catch (e) {
-        return '#' + clientId;
+        return '#' + id;
       }
     }
 
     async function loadProjetLabel(projetId) {
-      if (!projetId) return '—';
+      const id = refToId(projetId);
+      if (!id) return '—';
       try {
         const data = await grist.docApi.fetchTable('Projets', {
-          filters: { id: [projetId] }
+          filters: { id: [id] }
         });
         const recs = columnarToRecords(data);
-        return recs.length ? (recs[0].Nom || '#' + projetId) : ('#' + projetId);
+        return recs.length ? (recs[0].Nom || '#' + id) : ('#' + id);
       } catch (e) {
-        return '#' + projetId;
+        return '#' + id;
       }
     }
 
@@ -205,8 +217,9 @@
           : toISODate(addDays(new Date(), 30));
         const factureFields = {
           Type: ['facture'],
-          Client: [selectedDevis.Client || 0],
-          Projet: [selectedDevis.Projet || 0],
+          Statut: ['envoye'],
+          Client: [refToId(selectedDevis.Client)],
+          Projet: [refToId(selectedDevis.Projet)],
           Source: [selectedDevis.id],
           Objet: [selectedDevis.Objet || ''],
           Conditions: [selectedDevis.Conditions || ''],
