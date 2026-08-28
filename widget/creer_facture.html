@@ -85,6 +85,15 @@
       return d;
     }
 
+    // Formate une date en 'YYYY-MM-DD' (attendu par les colonnes Date Grist /
+    // UserActions de widget). Evite d'envoyer un objet JS Date mal encodé.
+    function toISODate(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return y + '-' + m + '-' + d;
+    }
+
     // Convertit un résultat columnar (objets {id: [], col: []}) en records.
     function columnarToRecords(cols) {
       const ids = cols.id || [];
@@ -182,8 +191,6 @@
       setStatus('Création de la facture en cours...', 'info');
 
       try {
-        const today = new Date();
-
         // 1. Créer le document facture (copie des infos du devis, Type=facture)
         //    Source pointe vers le devis d'origine.
         //    NB: BulkAddRecord attend une liste de valeurs par colonne.
@@ -192,6 +199,10 @@
         //    qui permet de référencer la facture dans les lignes sans dépendre
         //    de la valeur de retour.
         const factureId = -1;
+        const todayStr = toISODate(new Date());
+        const echeanceStr = selectedDevis.Date_Echeance
+          ? toISODate(new Date(selectedDevis.Date_Echeance))
+          : toISODate(addDays(new Date(), 30));
         const factureFields = {
           Type: ['facture'],
           Client: [selectedDevis.Client || 0],
@@ -200,8 +211,8 @@
           Objet: [selectedDevis.Objet || ''],
           Conditions: [selectedDevis.Conditions || ''],
           Mode_Paiement: [selectedDevis.Mode_Paiement || ''],
-          Date: [today],
-          Date_Echeance: [selectedDevis.Date_Echeance || addDays(today, 30)],
+          Date: [todayStr],
+          Date_Echeance: [echeanceStr],
         };
 
         // Lot atomique : créer la facture, copier ses lignes, accepter le devis.
