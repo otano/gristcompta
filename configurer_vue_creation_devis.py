@@ -3,8 +3,8 @@
 Configure la page « Créer un devis » du document Grist.
 
 La page (vue « Créer un devis » sur Documents) contient 3 sections :
-  1. « Formulaire devis » — Card natif Grist (type 'detail') : fiche d'un seul
-     devis, éditable, avec navigation et bouton « + » pour créer un devis.
+  1. « Formulaire devis » — Card natif Grist (type 'single') : fiche d'un seul
+     devis, éditable, avec navigation ◂▸ et bouton « + » pour créer un devis.
      Filtré sur Type=devis.
   2. « Lignes du devis » — grille Lignes_Document (type 'record'), liée au
      formulaire via la colonne Document : n'affiche que les lignes du devis
@@ -44,7 +44,7 @@ WIDGET_URL = os.environ.get(
 VIEW_NAME = "Créer un devis"
 # (clé, titre de section, type Grist, table)
 SECTIONS = [
-    ("form", "Formulaire devis", "detail", "Documents"),
+    ("form", "Formulaire devis", "single", "Documents"),
     ("lignes", "Lignes du devis", "record", "Lignes_Document"),
     ("pdf", "Aperçu · PDF", "custom", "Documents"),
 ]
@@ -187,7 +187,17 @@ def main():
 
     card, lignes, pdf = ids["form"], ids["lignes"], ids["pdf"]
 
-    # 3. Liaison des sections au formulaire (source de sélection).
+    # 3. Le formulaire doit être une Card unique ('single') : seul ce type
+    #    affiche la navigation ◂▸ et le bouton « + » de création de devis.
+    #    ('detail' = Card List : liste de cartes, pas de bouton « + ».)
+    cur = next(s for s in get_sections() if s["id"] == card)["fields"].get("parentKey")
+    if cur != "single":
+        apply([["UpdateRecord", "_grist_Views_section", card, {"parentKey": "single"}]])
+        print("   ✅ Formulaire converti en Card unique (parentKey='single').")
+    else:
+        print("   ℹ️  Formulaire déjà en Card unique (parentKey='single').")
+
+    # 4. Liaison des sections au formulaire (source de sélection).
     lignes_doc_ref = get_col_ref("Lignes_Document", "Document")
     apply([[
         "UpdateRecord", "_grist_Views_section", lignes,
