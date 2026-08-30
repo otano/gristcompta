@@ -44,6 +44,10 @@ qui configurent un document en ligne + un widget statique autonome.
   **ET** l'affichage `SetDisplayFormula` (gristHelper_Display) — les deux, sinon
   la grille montre `1` / `Personne(1)`.
 - `options.customView` d'une section custom = **chaîne JSON échappée** (json.dumps imbriqué).
+- Une section custom créée par `AddViewSection` n'est **pas liée** à la grille
+  (`linkSrcSectionRef=0`) → le widget ignore la sélection. Tout widget qui suit
+  la sélection doit être relié : `UpdateRecord linkSrcSectionRef` = id de la
+  grille (section du plus petit id sur la même vue).
 - colRefs hardcodés (Type=88, Statut=94, Refacturable=131…) dépendent de l'ordre
   de création ; les relire depuis `_grist_Tables_column` si nécessaire.
 - Dates envoyées en string `YYYY-MM-DD`.

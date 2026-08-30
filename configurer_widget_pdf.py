@@ -69,6 +69,33 @@ def find_custom_section(view_id, title):
     return None
 
 
+def find_grid_section(view_id, exclude_id):
+    """Grille (section source) de la vue = section du plus petit id (créée en
+    premier par creer_vues.py), hors section custom elle-même."""
+    best = None
+    for rec in get_sections():
+        f = rec["fields"]
+        if f.get("parentId") == view_id and rec["id"] != exclude_id:
+            if best is None or rec["id"] < best:
+                best = rec["id"]
+    return best
+
+
+def link_to_grid(section_id, view_id):
+    """Relie le widget custom à la grille de la vue (linkSrcSectionRef) pour qu'il
+    suive la sélection. Une section créée par AddViewSection n'est PAS liée."""
+    for rec in get_sections():
+        if rec["id"] == section_id and rec["fields"].get("linkSrcSectionRef"):
+            print(f"   (déjà liée à la grille sect. {rec['fields']['linkSrcSectionRef']})")
+            return
+    grid = find_grid_section(view_id, section_id)
+    if grid is None:
+        print("   ⚠️  aucune grille trouvée pour lier le widget")
+        return
+    apply([["UpdateRecord", "_grist_Views_section", section_id, {"linkSrcSectionRef": grid}]])
+    print(f"   ✅ widget lié à la grille (section {grid}) — la sélection pilote l'aperçu")
+
+
 def custom_options(url):
     """Options d'une section custom (customView = chaîne JSON échappée)."""
     return {
@@ -106,6 +133,7 @@ def configure_view(view_name):
               f"(section={existing['id']})")
         update_section_options(existing["id"], SECTION_TITLE, WIDGET_URL)
         print(f"✅ URL mise à jour pour '{view_name}'.")
+        link_to_grid(existing["id"], view_id)
         return
 
     result = apply(["AddViewSection", SECTION_TITLE, "custom", view_id, "Documents"])
@@ -113,6 +141,7 @@ def configure_view(view_name):
     update_section_options(section_id, SECTION_TITLE, WIDGET_URL)
     print(f"✅ Section custom '{SECTION_TITLE}' créée dans '{view_name}' "
           f"(section={section_id}), URL configurée.")
+    link_to_grid(section_id, view_id)
 
 
 def main():
