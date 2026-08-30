@@ -23,6 +23,10 @@ Deux sections custom « Aperçu · PDF » sont ajoutées dans les vues **Devis**
 Les coordonnées de l'en-tête et l'IBAN/BIC de règlement se règlent dans la table
 `Settings` (1 ligne), remplie par `configurer_settings.py`.
 
+Le logo de l'en-tête (`logo_labfab.jpg`, 300×300) est embarqué en base64 dans le
+fichier HTML : pour le changer, remplacer `logo_labfab.jpg` puis ré-injecter sa
+base64 à la place de `data:image/jpeg;base64,...` dans `<img class="logo-img">`.
+
 ## Principe commun
 
 Grist ne peut pas héberger un fichier statique : le widget doit être servi à une
