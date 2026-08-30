@@ -11,6 +11,7 @@ Ce script crée et configure les tables nécessaires au suivi financier :
 - Justificatifs
 - Depenses
 - Lignes_Depense
+- Settings (coordonnées de l'émetteur pour les PDF)
 
 Basé sur l'API Grist (https://support.getgrist.com/api/).
 
@@ -218,12 +219,22 @@ LIGNES_DEPENSE_COLUMNS = [
     },
 ]
 
+SETTINGS_COLUMNS = [
+    {"id": "Raison_Sociale", "type": "Text"},
+    {"id": "Adresse", "type": "Text"},
+    {"id": "Ville_CP", "type": "Text"},
+    {"id": "Email", "type": "Text"},
+    {"id": "Telephone", "type": "Text"},
+    {"id": "SIRET", "type": "Text"},
+]
+
 
 # ---------------------------------------------------------------------------
 # Rôles par table pour la création
 # ---------------------------------------------------------------------------
 
 ALL_TABLES = {
+    "Settings": SETTINGS_COLUMNS,
     "Personnes": PERSONNES_COLUMNS,
     "Projets": PROJETS_COLUMNS,
     "Documents": DOCUMENTS_COLUMNS,
@@ -237,7 +248,8 @@ ALL_TABLES = {
 def create_all_tables(grist: GristAPI) -> None:
     """Crée toutes les tables manquantes dans l'ordre de dépendance."""
     order = [
-        "Personnes",   # aucune dépendance
+        "Settings",     # aucune dépendance
+        "Personnes",    # aucune dépendance
         "Projets",     # dépend de Personnes
         "Documents",   # dépend de Personnes et Projets
         "Lignes_Document",  # dépend de Documents
