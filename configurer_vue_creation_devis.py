@@ -198,10 +198,15 @@ def main():
         print("   ℹ️  Formulaire déjà en Card unique (parentKey='single').")
 
     # 4. Liaison des sections au formulaire (source de sélection).
+    #    Le bon champ pour la colonne de la table CIBLE est linkTargetColRef
+    #    (ex. Lignes_Document.Document) ; linkSrcColRef = colonne de la table
+    #    SOURCE, 0 pour sélectionner par ligne. Mettre la colonne cible dans
+    #    linkSrcColRef invalide le lien (LinkConfig rejeté) -> grille jamais
+    #    filtrée (toutes les lignes).
     lignes_doc_ref = get_col_ref("Lignes_Document", "Document")
     apply([[
         "UpdateRecord", "_grist_Views_section", lignes,
-        {"linkSrcSectionRef": card, "linkSrcColRef": lignes_doc_ref},
+        {"linkSrcSectionRef": card, "linkSrcColRef": 0, "linkTargetColRef": lignes_doc_ref},
     ]])
     apply([["UpdateRecord", "_grist_Views_section", pdf, {
         "linkSrcSectionRef": card,

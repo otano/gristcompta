@@ -56,6 +56,12 @@ qui configurent un document en ligne + un widget statique autonome.
   (`linkSrcSectionRef=0`) → le widget ignore la sélection. Tout widget qui suit
   la sélection doit être relié : `UpdateRecord linkSrcSectionRef` = id de la
   grille (section du plus petit id sur la même vue).
+- Lier une grille par référence (devis → lignes) : la colonne de la table
+  **cible** va dans `linkTargetColRef` (ex. `Lignes_Document.Document`) et
+  `linkSrcColRef` reste **0** (sélection par ligne). Mettre la colonne cible
+  dans `linkSrcColRef` rend le `LinkConfig` invalide (`colonne appartient à la
+  mauvaise table`) → lien silencieusement ignoré → la grille affiche **toutes
+  les lignes** quelle que soit la sélection.
 - colRefs hardcodés (Type=88, Statut=94, Refacturable=131…) dépendent de l'ordre
   de création ; les relire depuis `_grist_Tables_column` si nécessaire.
 - Dates envoyées en string `YYYY-MM-DD`.
