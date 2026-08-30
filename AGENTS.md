@@ -23,6 +23,8 @@ qui configurent un document en ligne + un widget statique autonome.
    `_grist_Filters`). `Numerotation.py`, `configurer_affichage.py` (libellés de réf)
    ensuite. Ordre : setup → vues → numérotation → affichage.
 3. `configurer_settings.py` — remplit `Settings` (une ligne, modifiable dans Grist).
+   `nettoyer_orphelins.py` — purge les lignes `Lignes_Document` non reliées
+   (`Document=0`, résidus de tests).
 4. `configurer_widget.py` (facture depuis devis) et `configurer_widget_pdf.py`
    (sections « Aperçu · PDF » dans les vues Devis + Factures).
    `configurer_vue_creation_devis.py` — page « Créer un devis » : Card natif
@@ -59,12 +61,19 @@ qui configurent un document en ligne + un widget statique autonome.
   HBox/VBox alternés, feuille = id de section, `size` = proportion. Ex. une vue
   à 3 sections (form/grid sous-grid à gauche, widget à droite) :
   `{"children":[{"children":[{"children":[{"leaf":F,"size":60},{"leaf":L,"size":40}],"size":70},{"leaf":P,"size":30}]}],"collapsed":[]}`.
+- `numerotation.py` — `Documents.Numero` = **colonne de données + trigger
+  « apply to new records »** (pas une formule) : le numéro est calculé une fois
+  à la création (« plus grand DEV/FAC-YYYY-NNN + 1 ») puis **stocké** ; il ne se
+  recalcule pas à l'ouverture ni ne change aux suppressions. Conversion de la
+  formule vers donnée via `ModifyColumn`, les valeurs existantes sont recopiées.
 - Valeurs par défaut à la création d'un record = **trigger formula** : `ModifyColumn`
   (ou `UpdateRecord _grist_Tables_column`) avec `formula` + `recalcWhen=0` (valeur
   par défaut, appliquée aux nouveaux records) — **ne pas passer `recalcDeps`**
   (liste vide → AssertionError sandbox). Une valeur fournie explicitement à la
   création n'est **pas écrasée** (le widget facture garde son `Type`).
   Pas de `DATEADD` dans Grist : date + n jours = `TODAY() + datetime.timedelta(days=30)`.
+  Un trigger qui lit sa **propre colonne** (ex. max+1 sur les numéros) doit **exclure
+  la ligne courante** (`if r.id == $id: continue`), sinon la valeur reste vide.
 - Après un `AddRecord`, les triggers sont recalculés de façon **asynchrone** :
   attendre quelques secondes avant de relire les records.
 
