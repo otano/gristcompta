@@ -17,9 +17,9 @@ H = {"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json"}
 OBJET = "Devis test - impression 3D"
 
 LIGNES = [
-    {"Description": "Impression 3D pièce prototype (PLA)", "Quantite": 10, "Unite": "pièce", "Prix_Unitaire_HT": 15.0, "TVA": 0.20},
-    {"Description": "Frais de machine (découpe laser)", "Quantite": 3, "Unite": "h", "Prix_Unitaire_HT": 40.0, "TVA": 0.20},
-    {"Description": "Accompagnement / mise en route", "Quantite": 1, "Unite": "forfait", "Prix_Unitaire_HT": 120.0, "TVA": 0.20},
+    {"Description": "Impression 3D pièce prototype (PLA)", "Quantite": 10, "Unite": "pièce", "Prix_unitaire": 15.0},
+    {"Description": "Frais de machine (découpe laser)", "Quantite": 3, "Unite": "h", "Prix_unitaire": 40.0},
+    {"Description": "Accompagnement / mise en route", "Quantite": 1, "Unite": "forfait", "Prix_unitaire": 120.0},
 ]
 
 
@@ -82,11 +82,9 @@ def main():
     for doc in r.json()["records"]:
         if doc["id"] == devis_id:
             f = doc["fields"]
-            print("\nRécapitulatif :")
+            print("\nRécapitulatif (association non assujettie à la TVA) :")
             print(f"  Numero   : {f.get('Numero')}")
-            print(f"  Total HT : {f.get('Total_HT')}")
-            print(f"  Total TVA: {f.get('Total_TVA')}")
-            print(f"  Total TTC: {f.get('Total_TTC')}")
+            print(f"  Total    : {f.get('Total')}")
 
     print("\nOuvre la page 'Devis', sélectionne ce devis, puis clique sur")
     print("« Créer la facture » dans le widget.")

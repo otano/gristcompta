@@ -53,7 +53,7 @@
       <div class="field"><span class="k">Numéro</span><span class="v" id="dNumero">&mdash;</span></div>
       <div class="field"><span class="k">Client</span><span class="v" id="dClient">&mdash;</span></div>
       <div class="field"><span class="k">Projet</span><span class="v" id="dProjet">&mdash;</span></div>
-      <div class="field"><span class="k">Total TTC</span><span class="v" id="dTotal">&mdash;</span></div>
+      <div class="field"><span class="k">Total</span><span class="v" id="dTotal">&mdash;</span></div>
       <div class="field"><span class="k">Statut</span><span class="v" id="dStatut">&mdash;</span></div>
       <div class="field"><span class="k">Lignes</span><span class="v" id="dLignes">&mdash;</span></div>
     </div>
@@ -197,7 +197,7 @@
       document.getElementById('dProjet').textContent =
         await loadProjetLabel(selectedDevis.Projet);
       document.getElementById('dTotal').textContent =
-        fmtCurrency(selectedDevis.Total_TTC);
+        fmtCurrency(selectedDevis.Total);
       document.getElementById('dStatut').textContent = selectedDevis.Statut || '—';
       document.getElementById('dLignes').textContent = devisLines.length;
 
@@ -256,8 +256,7 @@
             Description: devisLines.map(l => l.Description || ''),
             Quantite: devisLines.map(l => l.Quantite == null ? 1 : l.Quantite),
             Unite: devisLines.map(l => l.Unite || ''),
-            Prix_Unitaire_HT: devisLines.map(l => l.Prix_Unitaire_HT || 0),
-            TVA: devisLines.map(l => l.TVA || 0),
+            Prix_unitaire: devisLines.map(l => l.Prix_unitaire || 0),
             Ordre: devisLines.map(l => l.Ordre || 0),
           };
           actions.push(['BulkAddRecord', 'Lignes_Document', ids, lineFields]);

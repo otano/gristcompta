@@ -168,25 +168,23 @@
       <thead>
         <tr>
           <th>Description</th>
-          <th>Prix unit. HT</th>
+          <th>Prix unitaire</th>
           <th>Qté</th>
           <th>Unité</th>
-          <th>TVA</th>
-          <th>Montant HT</th>
+          <th>Montant</th>
         </tr>
       </thead>
       <tbody id="itemsBody"></tbody>
     </table>
 
     <div class="totals">
-      <div class="row"><span>Sous-total HT</span><span class="v" id="subtotal">—</span></div>
-      <div class="row"><span>TVA</span><span class="v" id="taxTotal">—</span></div>
       <div class="row total"><span>Total à régler</span><span class="v" id="grandTotal">—</span></div>
     </div>
 
     <div class="note">
       <h2>Note</h2>
       <p id="docObjet"></p>
+      <p><strong>Association non assujettie à la TVA.</strong></p>
       <p id="docPaymentLine"></p>
       <p id="docNote"></p>
     </div>
@@ -256,11 +254,9 @@
       return s.replace(/\u00a0/g, ' ');
     }
 
-    function fmtTva(value) {
-      const n = Number(value);
-      if (value == null || isNaN(n) || n === 0) { return '—'; }
-      return (n * 100).toLocaleString('fr-FR', { maximumFractionDigits: 0 }) + ' %';
-    }
+    // Coordonnées bancaires par défaut (surchargées par la table Settings).
+    const IBAN_DEFAULT = 'FR76 4255 9000 6941 0200 4522 289';
+    const BIC_DEFAULT = 'CCOPFRPPXXX';
 
     // Convertit un résultat columnar ({id: [], col: []}) en records.
     function columnarToRecords(cols) {
@@ -385,7 +381,7 @@
       if (lignes.length === 0) {
         const tr = document.createElement('tr');
         const td = document.createElement('td');
-        td.colSpan = 6;
+        td.colSpan = 5;
         td.className = 'qty';
         td.textContent = 'Aucune ligne.';
         tr.appendChild(td);
@@ -395,28 +391,20 @@
         const tr = document.createElement('tr');
         tr.innerHTML =
           '<td class="desc">' + esc(l.Description || '') + '</td>' +
-          '<td>' + fmtMoney(l.Prix_Unitaire_HT) + '</td>' +
+          '<td>' + fmtMoney(l.Prix_unitaire) + '</td>' +
           '<td class="qty">' + fmtNum(l.Quantite) + '</td>' +
           '<td class="qty">' + esc(l.Unite || '') + '</td>' +
-          '<td class="tva">' + fmtTva(l.TVA) + '</td>' +
-          '<td>' + fmtMoney(l.Montant_HT) + '</td>';
+          '<td>' + fmtMoney(l.Montant) + '</td>';
         tbody.appendChild(tr);
       }
 
-      // Totaux (formules de Documents en priorité, sinon calcul local)
-      const subtotal = (doc.Total_HT != null) ? doc.Total_HT
-        : lignes.reduce((a, l) => a + (Number(l.Montant_HT) || 0), 0);
-      const tax = (doc.Total_TVA != null) ? doc.Total_TVA
-        : lignes.reduce((a, l) => a + (Number(l.Montant_TVA) || 0), 0);
-      const total = (doc.Total_TTC != null) ? doc.Total_TTC : (subtotal + tax);
-      byId('subtotal').textContent = fmtMoney(subtotal);
-      byId('taxTotal').textContent = fmtMoney(tax);
+      // Total (formule de Documents en priorité, sinon calcul local)
+      const total = (doc.Total != null) ? doc.Total
+        : lignes.reduce((a, l) => a + (Number(l.Montant) || 0), 0);
       byId('grandTotal').textContent = fmtMoney(total);
 
       // Note
       byId('docObjet').textContent = doc.Objet ? 'Objet : ' + doc.Objet : '';
-      byId('docPaymentLine').textContent = doc.Mode_Paiement
-        ? 'Mode de paiement : ' + doc.Mode_Paiement : '';
       byId('docNote').textContent = '';
       if (doc.Conditions) {
         byId('docNote').textContent = 'Conditions : ' + doc.Conditions;
@@ -433,10 +421,15 @@
       }
       byId('footQuestions').textContent = questions.join('\n');
 
+      const iban = (settings && settings.IBAN) || IBAN_DEFAULT;
+      const bic = (settings && settings.BIC) || BIC_DEFAULT;
       const paiement = [];
-      if (doc.Mode_Paiement) { paiement.push(doc.Mode_Paiement); }
+      if (doc.Mode_Paiement) { paiement.push('Mode de paiement : ' + doc.Mode_Paiement); }
+      paiement.push('Règlement virement :');
+      paiement.push('IBAN : ' + iban);
+      paiement.push('BIC : ' + bic);
       if (doc.Date_Echeance) { paiement.push('Paiement à : ' + fmtDate(doc.Date_Echeance)); }
-      byId('footPayment').textContent = paiement.join('\n') || '—';
+      byId('footPayment').textContent = paiement.join('\n');
 
       byId('footConditions').textContent = doc.Conditions || (isFacture
         ? 'Merci de votre confiance.' : 'Devis valable 30 jours.');

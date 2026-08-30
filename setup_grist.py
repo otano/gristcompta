@@ -155,22 +155,11 @@ DOCUMENTS_COLUMNS = [
     {"id": "Conditions", "type": "Text"},
     {"id": "Mode_Paiement", "type": "Choice", "widgetOptions": choice_options("mode_paiement")},
     {
-        "id": "Total_HT",
+        "id": "Total",
         "type": "Numeric",
         "isFormula": True,
-        "formula": "SUM(Lignes_Document.lookupRecords(Document=$id).Montant_HT)",
-    },
-    {
-        "id": "Total_TVA",
-        "type": "Numeric",
-        "isFormula": True,
-        "formula": "SUM(Lignes_Document.lookupRecords(Document=$id).Montant_TVA)",
-    },
-    {
-        "id": "Total_TTC",
-        "type": "Numeric",
-        "isFormula": True,
-        "formula": "$Total_HT + $Total_TVA",
+        "formula": "SUM(Lignes_Document.lookupRecords(Document=$id).Montant)",
+        "label": "Total",
     },
 ]
 
@@ -179,12 +168,9 @@ LIGNES_DOCUMENT_COLUMNS = [
     {"id": "Description", "type": "Text"},
     {"id": "Quantite", "type": "Numeric"},
     {"id": "Unite", "type": "Text"},
-    {"id": "Prix_Unitaire_HT", "type": "Numeric"},
-    {"id": "TVA", "type": "Numeric"},
+    {"id": "Prix_unitaire", "type": "Numeric", "label": "Prix unitaire"},
     {"id": "Ordre", "type": "Numeric"},
-    {"id": "Montant_HT", "type": "Numeric", "isFormula": True, "formula": "$Quantite * $Prix_Unitaire_HT"},
-    {"id": "Montant_TVA", "type": "Numeric", "isFormula": True, "formula": "$Montant_HT * $TVA"},
-    {"id": "Montant_TTC", "type": "Numeric", "isFormula": True, "formula": "$Montant_HT + $Montant_TVA"},
+    {"id": "Montant", "type": "Numeric", "isFormula": True, "formula": "$Quantite * $Prix_unitaire", "label": "Montant"},
 ]
 
 JUSTIFICATIFS_COLUMNS = [
@@ -226,6 +212,8 @@ SETTINGS_COLUMNS = [
     {"id": "Email", "type": "Text"},
     {"id": "Telephone", "type": "Text"},
     {"id": "SIRET", "type": "Text"},
+    {"id": "IBAN", "type": "Text"},
+    {"id": "BIC", "type": "Text"},
 ]
 
 

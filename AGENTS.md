@@ -16,8 +16,9 @@ qui configurent un document en ligne + un widget statique autonome.
 ## Architecture & ordre d'exécution
 
 1. `setup_grist.py` — crée les 8 tables. `Documents` unifie **devis et factures**
-   (colonne `Type` : `devis`/`facture`) ; totaux `Total_HT/TVA/TTC` = formules sur
-   `Lignes_Document`. `Settings` = coordonnées de l'émetteur (en-têtes des PDF).
+   (colonne `Type` : `devis`/`facture`) ; montant `Total` = formule sur
+   `Lignes_Document` (asso **non soumise à la TVA** : pas de colonnes TVA/TTC).
+   `Settings` = coordonnées de l'émetteur + IBAN/BIC (en-têtes et règlement PDF).
 2. `creer_vues.py` — pages (Devis, Factures, Clients… = `AddView` + filtre
    `_grist_Filters`). `Numerotation.py`, `configurer_affichage.py` (libellés de réf)
    ensuite. Ordre : setup → vues → numérotation → affichage.
@@ -28,7 +29,8 @@ qui configurent un document en ligne + un widget statique autonome.
    Hébergés sur GitHub Pages : pousser sur `main` déploie (build auto). URL :
    `https://otano.github.io/gristcompta/widget/...`.
    `generer_pdf.html` lit `Documents/Lignes_Document/Personnes/Settings` et exporte
-   en PDF via `window.print()` + `@media print` ; `creer_facture.html` duplique un
+   en PDF via `window.print()` + `@media print` (note « association non assujettie
+   à la TVA », règlement virement IBAN/BIC) ; `creer_facture.html` duplique un
    devis en facture (lot atomique, réf négative).
 
 ## Pièges API Grist (durs à deviner, cf. git log)

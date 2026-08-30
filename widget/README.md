@@ -13,14 +13,15 @@ se calcule toute seule, et le devis passe au statut **accepté**.
 ## `generer_pdf.html`
 
 Affiche le devis ou la facture sélectionné(e) mis(e) en forme (en-tête émetteur
-issu de la table `Settings`, client, lignes avec TVA, totaux HT/TVA/TTC, note,
-pied de page) et permet de l'exporter en PDF via **« Imprimer / Enregistrer en
-PDF »** (`window.print()` + `@media print`).
+issu de la table `Settings`, client, lignes, total, note « association non
+assujettie à la TVA », règlement virement IBAN/BIC, pied de page) et permet de
+l'exporter en PDF via **« Imprimer / Enregistrer en PDF »** (`window.print()` +
+`@media print`).
 
 Deux sections custom « Aperçu · PDF » sont ajoutées dans les vues **Devis** et
 **Factures** par `configurer_widget_pdf.py` (le même widget gère les deux types).
-Les coordonnées de l'en-tête se règlent dans la table `Settings` (1 ligne),
-remplie par `configurer_settings.py`.
+Les coordonnées de l'en-tête et l'IBAN/BIC de règlement se règlent dans la table
+`Settings` (1 ligne), remplie par `configurer_settings.py`.
 
 ## Principe commun
 

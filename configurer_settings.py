@@ -25,13 +25,28 @@ DEFAULTS = {
     "Email": "",
     "Telephone": "",
     "SIRET": "",
+    "IBAN": "FR76 4255 9000 6941 0200 4522 289",
+    "BIC": "CCOPFRPPXXX",
 }
+
+
+def apply(actions):
+    """Envoie des actions vers /apply (UpdateRecord, etc.)."""
+    r = requests.post(f"{BASE_URL}/api/docs/{DOC_ID}/apply", headers=H, json=actions)
+    r.raise_for_status()
+    return r.json()
 
 
 def get_tables():
     r = requests.get(f"{BASE_URL}/api/docs/{DOC_ID}/tables", headers=H)
     r.raise_for_status()
     return [t["id"] for t in r.json()["tables"]]
+
+
+def get_columns(table_id):
+    r = requests.get(f"{BASE_URL}/api/docs/{DOC_ID}/tables/{table_id}/columns", headers=H)
+    r.raise_for_status()
+    return [c["id"] for c in r.json()["columns"]]
 
 
 def get_records(table_id):
@@ -60,18 +75,39 @@ def main():
     else:
         print("ℹ️  Table Settings déjà présente.")
 
+    # Colonnes manquantes (ex. IBAN/BIC ajoutées après coup)
+    existing_cols = set(get_columns("Settings"))
+    missing = [c for c in SETTINGS_COLUMNS if c["id"] not in existing_cols]
+    if missing:
+        r = requests.post(
+            f"{BASE_URL}/api/docs/{DOC_ID}/tables/Settings/columns",
+            headers=H,
+            json={"columns": missing},
+        )
+        r.raise_for_status()
+        print(f"✅ Colonne(s) ajoutée(s) à Settings : {[c['id'] for c in missing]}")
+
     records = get_records("Settings")
-    if records:
-        print(f"ℹ️  Coordonnées déjà présentes (id={records[0]['id']}).")
+    if not records:
+        r = requests.post(
+            f"{BASE_URL}/api/docs/{DOC_ID}/tables/Settings/records",
+            headers=H,
+            json={"records": [{"fields": DEFAULTS}]},
+        )
+        r.raise_for_status()
+        print("✅ Ligne de coordonnées insérée (modifiable dans Grist).")
         return
 
-    r = requests.post(
-        f"{BASE_URL}/api/docs/{DOC_ID}/tables/Settings/records",
-        headers=H,
-        json={"records": [{"fields": DEFAULTS}]},
-    )
-    r.raise_for_status()
-    print("✅ Ligne de coordonnées insérée (modifiable dans Grist).")
+    # Remplit uniquement les champs encore vides (ne touche pas aux saisies).
+    row_id = records[0]["id"]
+    fields = records[0]["fields"]
+    updates = {k: v for k, v in DEFAULTS.items()
+               if (k == "IBAN" or k == "BIC") and not fields.get(k)}
+    if updates:
+        apply([["UpdateRecord", "Settings", row_id, updates]])
+        print(f"✅ Champs complétés : {', '.join(updates)}")
+    else:
+        print("ℹ️  Coordonnées déjà présentes (id={}).".format(row_id))
 
 
 if __name__ == "__main__":
