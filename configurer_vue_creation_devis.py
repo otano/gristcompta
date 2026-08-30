@@ -208,6 +208,10 @@ def main():
     print("   ✅ Formulaire filtré sur Type=devis, champ 'Source' retiré.")
 
     # 5. Disposition : formulaire + lignes à gauche, PDF à droite.
+    # NB : layoutSpec est une colonne JSON lue par le client Grist. L'envoyer
+    # comme dict Python via /apply la stocke en « repr » (guillemets simples)
+    # -> le document ne se charge plus (erreur JSON position 1 mode récupération).
+    # Toujours envoyer une chaîne json.dumps().
     layout = {
         "children": [{
             "children": [
@@ -220,7 +224,7 @@ def main():
         }],
         "collapsed": [],
     }
-    apply([["UpdateRecord", "_grist_Views", view_id, {"layoutSpec": layout}]])
+    apply([["UpdateRecord", "_grist_Views", view_id, {"layoutSpec": json.dumps(layout)}]])
     print("   ✅ Layout : formulaire/lignes à gauche, PDF à droite.")
 
     # 6. Valeurs par défaut des nouveaux devis (trigger « new records »).

@@ -57,6 +57,14 @@ qui configurent un document en ligne + un widget statique autonome.
 - colRefs hardcodés (Type=88, Statut=94, Refacturable=131…) dépendent de l'ordre
   de création ; les relire depuis `_grist_Tables_column` si nécessaire.
 - Dates envoyées en string `YYYY-MM-DD`.
+- Colonnes JSON (`layoutSpec`, `options`, `filter`…) : envoyer via `/apply` une
+  **chaîne** `json.dumps(...)`. Passer un dict Python les stocke en **repr**
+  (guillemets simples) → le document ne se charge plus dans l'UI (« mode
+  récupération », erreur *Expected property name or '}' in JSON at position 1*).
+  Réparation = `UpdateRecord` avec la valeur en JSON valide ; tant que l'état
+  « récupération » est actif côté serveur, les métadonnées sont illisibles via
+  l'API GET (**seuls `/apply` et `/download` restent utilisables**) — l'accès
+  revient une fois le doc rouvert normalement.
 - Layout natif d'une vue = `layoutSpec` JSON dans `_grist_Views` : racine VBox,
   HBox/VBox alternés, feuille = id de section, `size` = proportion. Ex. une vue
   à 3 sections (form/grid sous-grid à gauche, widget à droite) :
