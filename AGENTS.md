@@ -25,6 +25,10 @@ qui configurent un document en ligne + un widget statique autonome.
 3. `configurer_settings.py` — remplit `Settings` (une ligne, modifiable dans Grist).
 4. `configurer_widget.py` (facture depuis devis) et `configurer_widget_pdf.py`
    (sections « Aperçu · PDF » dans les vues Devis + Factures).
+   `configurer_vue_creation_devis.py` — page « Créer un devis » : Card natif
+   (`detail`) filtré Type=devis + grille `Lignes_Document` liée (réf `Document`)
+   + widget PDF lié, layout natif, valeurs par défaut des nouveaux devis.
+   Ordre : setup → vues → numérotation → affichage → settings → widgets → fiche.
 5. `widget/` — fichiers HTML autonomes (grist-plugin-api.js) ; pas servis par Grist.
    Hébergés sur GitHub Pages : pousser sur `main` déploie (build auto). URL :
    `https://otano.github.io/gristcompta/widget/...`.
@@ -51,6 +55,18 @@ qui configurent un document en ligne + un widget statique autonome.
 - colRefs hardcodés (Type=88, Statut=94, Refacturable=131…) dépendent de l'ordre
   de création ; les relire depuis `_grist_Tables_column` si nécessaire.
 - Dates envoyées en string `YYYY-MM-DD`.
+- Layout natif d'une vue = `layoutSpec` JSON dans `_grist_Views` : racine VBox,
+  HBox/VBox alternés, feuille = id de section, `size` = proportion. Ex. une vue
+  à 3 sections (form/grid sous-grid à gauche, widget à droite) :
+  `{"children":[{"children":[{"children":[{"leaf":F,"size":60},{"leaf":L,"size":40}],"size":70},{"leaf":P,"size":30}]}],"collapsed":[]}`.
+- Valeurs par défaut à la création d'un record = **trigger formula** : `ModifyColumn`
+  (ou `UpdateRecord _grist_Tables_column`) avec `formula` + `recalcWhen=0` (valeur
+  par défaut, appliquée aux nouveaux records) — **ne pas passer `recalcDeps`**
+  (liste vide → AssertionError sandbox). Une valeur fournie explicitement à la
+  création n'est **pas écrasée** (le widget facture garde son `Type`).
+  Pas de `DATEADD` dans Grist : date + n jours = `TODAY() + datetime.timedelta(days=30)`.
+- Après un `AddRecord`, les triggers sont recalculés de façon **asynchrone** :
+  attendre quelques secondes avant de relire les records.
 
 ## API widget (grist-plugin-api.js)
 
