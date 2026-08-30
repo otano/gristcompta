@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 Crée les pages/vues du document Grist (Devis, Factures, Refacturation,
-Trésorerie) avec leurs filtres, via l'API /apply et la table _grist_Filters.
+Clients, Membres, Projets, Dépenses) avec leurs filtres, via l'API /apply
+et la table _grist_Filters.
 
 Stratégie :
 - Une "page" Grist = une vue (_grist_Views) + une ou plusieurs sections
@@ -127,11 +128,6 @@ def main():
     print("📋 Page 'Refacturation'...")
     view_id, section_id = create_view("Lignes_Depense", "Refacturation", 131, {"included": [True]})
     print(f"   ✅ Refacturation (view={view_id}, section={section_id}, filtre Refacturable=true)")
-
-    # Vue "Trésorerie" : Documents (vue sans filtre dédiée)
-    print("📋 Page 'Trésorerie'...")
-    view_id, section_id = create_view("Documents", "Trésorerie")
-    print(f"   ✅ Trésorerie (view={view_id}, section={section_id})")
 
     # Vue "Clients" : Personnes filtré sur Role=client (col 80)
     print("📋 Page 'Clients'...")
