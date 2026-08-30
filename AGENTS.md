@@ -27,9 +27,11 @@ qui configurent un document en ligne + un widget statique autonome.
    (`Document=0`, résidus de tests).
 4. `configurer_widget.py` (facture depuis devis) et `configurer_widget_pdf.py`
    (sections « Aperçu · PDF » dans les vues Devis + Factures).
-   `configurer_vue_creation_devis.py` — page « Créer un devis » : Card natif
-   (`detail`) filtré Type=devis + grille `Lignes_Document` liée (réf `Document`)
-   + widget PDF lié, layout natif, valeurs par défaut des nouveaux devis.
+   `configurer_vue_creation_devis.py` — page « Créer un devis » : Card seul
+   (`single` = c'est la Card unique qui affiche navigation ◂▸ + bouton « + »,
+   pas la Card List `detail`) filtré Type=devis + grille `Lignes_Document`
+   liée (réf `Document`) + widget PDF lié, layout natif, valeurs par défaut
+   des nouveaux devis.
    Ordre : setup → vues → numérotation → affichage → settings → widgets → fiche.
 5. `widget/` — fichiers HTML autonomes (grist-plugin-api.js) ; pas servis par Grist.
    Hébergés sur GitHub Pages : pousser sur `main` déploie (build auto). URL :
