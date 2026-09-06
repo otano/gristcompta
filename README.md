@@ -13,10 +13,12 @@ Les scripts suivants configurent le document Grist de manière **idempotente**
 
 | Script | Rôle |
 | --- | --- |
-| `setup_grist.py` | Crée les 7 tables (Personnes, Projets, Documents, Lignes_Document, Justificatifs, Depenses, Lignes_Depense) avec colonnes et formules de totaux. |
-| `creer_vues.py` | Crée les pages Devis, Factures, Refacturation, Trésorerie, Clients, Membres, Projets, Dépenses avec leurs filtres. |
+| `setup_grist.py` | Crée les 8 tables. `Documents` unifie devis et factures (colonne `Type`) ; montant `Total` = formule sur `Lignes_Document` (asso **non soumise à la TVA** : pas de colonnes TVA/TTC). `Settings` = coordonnées de l'émetteur + IBAN/BIC (en-têtes et règlement PDF). |
+| `creer_vues.py` | Crée les pages Devis, Factures, Refacturation, Projets, Dépenses avec leurs filtres. |
+| `consolider_refacturation.py` | Consolide le flux achat → devis : passe Lignes_Depense en TTC, ajoute le lien vers le devis (`Document`), ajoute le projet hérité, les totaux, les alertes de cohérence, et crée une page « Refacturation · <Projet> » par projet. |
 | `numerotation.py` | Configure la numérotation automatique `DEV-AAAA-NNN` / `FAC-AAAA-NNN` (par année et par type). |
 | `configurer_widget.py` | Ajoute/config la section custom « Créer une facture depuis un devis » dans la vue Devis. |
+| `configurer_widget_pdf.py` | Ajoute les sections « Aperçu · PDF » dans les vues Devis et Factures. |
 
 Le widget lui-même se trouve dans `widget/creer_facture.html` (fichier autonome
 utilisant la Grist widget API) — voir `widget/README.md`.
@@ -43,6 +45,8 @@ pour le widget).
 source .env && uv run python setup_grist.py
 source .env && uv run python creer_vues.py
 source .env && uv run python numerotation.py
+source .env && uv run python consolider_refacturation.py
+source .env && uv run python configurer_affichage.py
 GRIST_WIDGET_URL="https://<url-publique>/creer_facture.html" uv run python configurer_widget.py
 ```
 

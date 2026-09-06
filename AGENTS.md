@@ -26,8 +26,20 @@ qui configurent un document en ligne + un widget statique autonome.
    `configurer_affichage.py` (libellés de réf) ensuite.
    Ordre : setup → vues → numérotation → affichage.
 3. `configurer_settings.py` — remplit `Settings` (une ligne, modifiable dans Grist).
-   `nettoyer_orphelins.py` — purge les lignes `Lignes_Document` non reliées
-   (`Document=0`, résidus de tests).
+   `nettoyer_orphelins.py` — purge les lignes `Lignes_Document`/`Lignes_Depense`
+   non reliées (`Document=0`/`Depense=0`, résidus de tests).
+4. `consolider_refacturation.py` — consolide le flux achat → devis (idempotent) :
+   `Lignes_Depense` en **tout TTC** (asso non assujettie à la TVA) :
+   `Prix_Unitaire_HT`→`Prix_unitaire`, `Prix_Refacture_HT`→`Prix_Refacture`
+   (formule `Prix_unitaire*(1+Taux_Marge)`), colonne `Document` (Ref Documents,
+   **colonne de donnée**, seul lien vers le devis — à remplir uniquement sur les
+   lignes `Refacturable=true`), `Projet` (formule `$Depense.Projet`),
+   `Total_Refacture` (formule `Quantite*Prix_Refacture`) et
+   `Verif_Refacturation` (alerte si une ligne non refacturable est liée à un
+   devis). Crée une page « Refacturation · <Projet> » par projet (grille des
+   lignes de dépense filtrée sur le projet). `configurer_affichage.py`
+   (libellés de réf) ensuite. Ordre : setup → vues → numérotation → affichage
+   → settings → widgets → fiche → consolider.
 4. `configurer_widget.py` (facture depuis devis) et `configurer_widget_pdf.py`
    (sections « Aperçu · PDF » dans les vues Devis + Factures).
    `configurer_vue_creation_devis.py` — page « Créer un devis » : Card seul
@@ -87,6 +99,10 @@ qui configurent un document en ligne + un widget statique autonome.
   à la création (« plus grand DEV/FAC-YYYY-NNN + 1 ») puis **stocké** ; il ne se
   recalcule pas à l'ouverture ni ne change aux suppressions. Conversion de la
   formule vers donnée via `ModifyColumn`, les valeurs existantes sont recopiées.
+- `Lignes_Depense.Document` est une colonne **de donnée** (pas une formule) :
+  elle pointe vers le devis qui facture la ligne. `AddColumn` sans
+  `isFormula: false` explicite crée parfois une formule vide ; `consolider_refacturation.py`
+  vérifie et corrige cet état à chaque exécution.
 - Valeurs par défaut à la création d'un record = **trigger formula** : `ModifyColumn`
   (ou `UpdateRecord _grist_Tables_column`) avec `formula` + `recalcWhen=0` (valeur
   par défaut, appliquée aux nouveaux records) — **ne pas passer `recalcDeps`**

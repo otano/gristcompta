@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """
-Supprime les lignes orphelines de Lignes_Document : celles dont la référence
-`Document` pointe vers 0 (aucun devis/facture). Résidus de tests (lignes
-dupliquées non reliées), inutiles dans la compta.
+Supprime les lignes orphelines :
+- Lignes_Document : celles dont la référence `Document` pointe vers 0 (aucun
+  devis/facture). Résidus de tests (lignes dupliquées non reliées).
+- Lignes_Depense : celles dont la référence `Depense` pointe vers 0 (aucune
+  dépense parente). Résidus de tests de la refacturation.
 
 Idempotent : une re-exécution ne trouve plus rien à supprimer. Ne touche pas
-aux lignes reliées à un document.
+aux lignes reliées à un document ou à une dépense.
 """
 
 import os
@@ -30,30 +32,32 @@ def apply(actions):
     return r.json()
 
 
-def main():
-    lines = get_table("Lignes_Document")
-    orphans = [x["id"] for x in lines if not x["fields"].get("Document")]
-
-    print("=" * 60)
-    print("🧹 Nettoyage des lignes orphelines (Document=0)")
-    print("=" * 60)
-    print(f"Total lignes : {len(lines)}, orphelines : {len(orphans)}")
-
+def purge(table, ref_col, ref_label):
+    """Supprime les lignes orphelines (ref_col vide) d'une table."""
+    lines = get_table(table)
+    orphans = [x["id"] for x in lines if not x["fields"].get(ref_col)]
+    print(f"  {table} : {len(lines)} lignes, {len(orphans)} orphelines ({ref_col}=0)")
     if not orphans:
-        print("Rien à supprimer.")
         return
-
     for x in lines:
         if x["id"] in orphans:
             f = x["fields"]
-            print(f"  - ligne {x['id']}: {f.get('Description')!r} "
+            print(f"    - ligne {x['id']}: {f.get('Description')!r} "
                   f"(qté {f.get('Quantite')} x {f.get('Prix_unitaire')} €)")
+    apply([["BulkRemoveRecord", table, orphans]])
+    after = get_table(table)
+    restants = [x for x in after if not x["fields"].get(ref_col)]
+    print(f"  ✅ {len(orphans)} orphelines supprimées ({ref_label}=0) ; "
+          f"il en reste {len(restants)} (devrait être 0).")
 
-    apply([["BulkRemoveRecord", "Lignes_Document", orphans]])
-    after = get_table("Lignes_Document")
-    restants = [x for x in after if not x["fields"].get("Document")]
-    print(f"\n✅ {len(orphans)} lignes orphelines supprimées ; "
-          f"il en reste {len(restants)} non reliées (devrait être 0).")
+
+def main():
+    print("=" * 60)
+    print("🧹 Nettoyage des lignes orphelines")
+    print("=" * 60)
+    purge("Lignes_Document", "Document", "Document")
+    purge("Lignes_Depense", "Depense", "Depense")
+    print("\n✅ Nettoyage terminé")
 
 
 if __name__ == "__main__":

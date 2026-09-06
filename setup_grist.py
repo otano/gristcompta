@@ -190,18 +190,52 @@ DEPENSES_COLUMNS = [
     {"id": "Date_Remboursement", "type": "Date"},
 ]
 
+# Association non assujettie à la TVA : tous les montants sont TTC (pas de
+# colonnes HT/TVA). Une ligne de dépense refacturable est liée au devis qui la
+# facture (colonne Document) — seules les lignes Refacturable=true doivent en
+# porter une.
 LIGNES_DEPENSE_COLUMNS = [
     {"id": "Depense", "type": "Ref", "refTable": "Depenses"},
     {"id": "Description", "type": "Text"},
     {"id": "Quantite", "type": "Numeric"},
-    {"id": "Prix_Unitaire_HT", "type": "Numeric"},
+    {"id": "Prix_unitaire", "type": "Numeric"},
     {"id": "Refacturable", "type": "Bool"},
     {"id": "Taux_Marge", "type": "Numeric"},
+    {"id": "Document", "type": "Ref", "refTable": "Documents", "label": "Lié au devis"},
     {
-        "id": "Prix_Refacture_HT",
+        "id": "Prix_Refacture",
         "type": "Numeric",
         "isFormula": True,
-        "formula": "$Prix_Unitaire_HT * (1 + $Taux_Marge)",
+        "formula": "$Prix_unitaire * (1 + $Taux_Marge)",
+        "label": "Prix refacturé",
+    },
+    {
+        "id": "Total_Refacture",
+        "type": "Numeric",
+        "isFormula": True,
+        "formula": "$Quantite * $Prix_Refacture",
+        "label": "Total refacturé",
+    },
+    {
+        "id": "Projet",
+        "type": "Ref",
+        "refTable": "Projets",
+        "isFormula": True,
+        "formula": "$Depense.Projet",
+        "label": "Projet",
+    },
+    {
+        "id": "Verif_Refacturation",
+        "type": "Text",
+        "isFormula": True,
+        "formula": (
+            'if not $Refacturable and $Document:\n'
+            '    return "Attention : ligne non refacturable liée à un devis"\n'
+            'elif $Refacturable and not $Document:\n'
+            '    return "À lier à un devis"\n'
+            'return ""'
+        ),
+        "label": "Vérif. refacturation",
     },
 ]
 

@@ -19,6 +19,8 @@ Ce script :
      - toute référence → Documents   : Numero
      - Depenses.Justificatif         : Commentaire (Justificatifs)
      - Lignes_Depense.Depense        : Date (Depenses)
+     - Lignes_Depense.Projet         : Nom (Projets)
+     - Lignes_Depense.Document       : Numero (Documents)
 
 Idempotent : ré-exécutable sans erreur.
 """
@@ -88,6 +90,8 @@ VISIBLE_MAP = {
     ("Depenses", "Projet"): ("Projets", "Nom"),
     ("Depenses", "Justificatif"): ("Justificatifs", "Commentaire"),
     ("Lignes_Depense", "Depense"): ("Depenses", "Date"),
+    ("Lignes_Depense", "Projet"): ("Projets", "Nom"),
+    ("Lignes_Depense", "Document"): ("Documents", "Numero"),
     ("Lignes_Document", "Document"): ("Documents", "Numero"),
 }
 
