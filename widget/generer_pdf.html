@@ -361,7 +361,6 @@
         const toLines = [];
         if (client.Email) { toLines.push(client.Email); }
         if (client.Telephone) { toLines.push(client.Telephone); }
-        if (client.Role) { toLines.push('Rôle : ' + client.Role); }
         byId('toAddr').innerHTML = toLines.join('<br>') || '&nbsp;';
       } else {
         byId('toAddr').innerHTML = '&nbsp;';
