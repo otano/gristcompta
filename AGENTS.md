@@ -19,9 +19,12 @@ qui configurent un document en ligne + un widget statique autonome.
    (colonne `Type` : `devis`/`facture`) ; montant `Total` = formule sur
    `Lignes_Document` (asso **non soumise à la TVA** : pas de colonnes TVA/TTC).
    `Settings` = coordonnées de l'émetteur + IBAN/BIC (en-têtes et règlement PDF).
-2. `creer_vues.py` — pages (Devis, Factures, Clients… = `AddView` + filtre
-   `_grist_Filters`). `Numerotation.py`, `configurer_affichage.py` (libellés de réf)
-   ensuite. Ordre : setup → vues → numérotation → affichage.
+2. `creer_vues.py` — pages (Devis, Factures, Refacturation, Projets, Dépenses
+   = `AddView` + filtre `_grist_Filters`). Une seule table `Personnes` avec
+   colonne `Role` (membre/client/prestataire), **pas** de pages Clients/Membres
+   (supprimées par `nettoyer_vues.py`). `Numerotation.py`,
+   `configurer_affichage.py` (libellés de réf) ensuite.
+   Ordre : setup → vues → numérotation → affichage.
 3. `configurer_settings.py` — remplit `Settings` (une ligne, modifiable dans Grist).
    `nettoyer_orphelins.py` — purge les lignes `Lignes_Document` non reliées
    (`Document=0`, résidus de tests).
@@ -33,6 +36,8 @@ qui configurent un document en ligne + un widget statique autonome.
    liée (réf `Document`) + widget PDF lié, layout natif, valeurs par défaut
    des nouveaux devis.
    Ordre : setup → vues → numérotation → affichage → settings → widgets → fiche.
+   `nettoyer_vues.py` — supprime les vues/pages inutilisées (Clients, Membres,
+   « projets » en minuscule) ; sûre à relancer (aucune donnée touchée).
 5. `widget/` — fichiers HTML autonomes (grist-plugin-api.js) ; pas servis par Grist.
    Hébergés sur GitHub Pages : pousser sur `main` déploie (build auto). URL :
    `https://otano.github.io/gristcompta/widget/...`.

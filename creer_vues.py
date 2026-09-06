@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 """
 Crée les pages/vues du document Grist (Devis, Factures, Refacturation,
-Clients, Membres, Projets, Dépenses) avec leurs filtres, via l'API /apply
-et la table _grist_Filters.
+Projets, Dépenses) avec leurs filtres, via l'API /apply et la table
+_grist_Filters.
+
+Note : les pages « Clients » et « Membres » ont été supprimées (la table
+Personnes suffit, colonne Role = membre/client/prestataire) ; voir
+nettoyer_vues.py.
 
 Stratégie :
 - Une "page" Grist = une vue (_grist_Views) + une ou plusieurs sections
@@ -128,16 +132,6 @@ def main():
     print("📋 Page 'Refacturation'...")
     view_id, section_id = create_view("Lignes_Depense", "Refacturation", 131, {"included": [True]})
     print(f"   ✅ Refacturation (view={view_id}, section={section_id}, filtre Refacturable=true)")
-
-    # Vue "Clients" : Personnes filtré sur Role=client (col 80)
-    print("📋 Page 'Clients'...")
-    view_id, section_id = create_view("Personnes", "Clients", 80, {"included": ["client"]})
-    print(f"   ✅ Clients (view={view_id}, section={section_id}, filtre Role=client)")
-
-    # Vue "Membres" : Personnes filtré sur Role=membre (col 80)
-    print("📋 Page 'Membres'...")
-    view_id, section_id = create_view("Personnes", "Membres", 80, {"included": ["membre"]})
-    print(f"   ✅ Membres (view={view_id}, section={section_id}, filtre Role=membre)")
 
     # Vue "Projets" : Projets
     print("📋 Page 'Projets'...")

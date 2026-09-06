@@ -87,7 +87,6 @@ VISIBLE_MAP = {
     ("Depenses", "Personne"): ("Personnes", "Nom_Complet"),
     ("Depenses", "Projet"): ("Projets", "Nom"),
     ("Depenses", "Justificatif"): ("Justificatifs", "Commentaire"),
-    ("Lignes_Refacturation", "Depense"): ("Depenses", "Date"),
     ("Lignes_Depense", "Depense"): ("Depenses", "Date"),
     ("Lignes_Document", "Document"): ("Documents", "Numero"),
 }
