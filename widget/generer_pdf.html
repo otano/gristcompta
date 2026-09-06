@@ -273,10 +273,6 @@
       return columnarToRecords(data);
     }
 
-    function nomComplet(p) {
-      return [p.Prenom, p.Nom].filter(Boolean).join(' ') || p.Email || ('#' + p.id);
-    }
-
     // ------------------------------------------------------------------
     // Rendu du document
     // ------------------------------------------------------------------
@@ -356,13 +352,19 @@
       byId('fromAddr').innerHTML = fromLines.join('<br>') || '&nbsp;';
 
       // Client
-      byId('toName').textContent = client ? nomComplet(client) : '—';
       if (client) {
+        byId('toName').textContent = client.Nom || client.Email || ('#' + client.id);
         const toLines = [];
+        if (client.Prenom) { toLines.push(client.Prenom); }
+        if (client.Adresse) { toLines.push(client.Adresse); }
+        if (client.CP || client.Ville) {
+          toLines.push([client.CP, client.Ville].filter(Boolean).join(' '));
+        }
         if (client.Email) { toLines.push(client.Email); }
         if (client.Telephone) { toLines.push(client.Telephone); }
         byId('toAddr').innerHTML = toLines.join('<br>') || '&nbsp;';
       } else {
+        byId('toName').textContent = '—';
         byId('toAddr').innerHTML = '&nbsp;';
       }
 
