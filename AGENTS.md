@@ -125,6 +125,11 @@ qui configurent un document en ligne + un widget statique autonome.
 
 - `grist.docApi.fetchTable(id)` **ignore ses options** (filters/expandRefs) → table
   entière en valeurs brutes, format **columnar** (à retransposer) ; filtrer en JS.
+- `grist.onReady` **n'existe pas** dans grist-plugin-api.js (seuls `ready`,
+  `onRecord`, `onRecords`, `onOptions`…). L'appeler lève une `TypeError` qui
+  **coupe le script au milieu** → tout ce qui suit (ex. `addEventListener`)
+  n'est jamais exécuté, le widget paraît « mort ». Charger après le handshake
+  via `grist.ready()` + `setTimeout(load, ~800)` et/ou `grist.onRecords()`.
 - `grist.onRecord`/`fetchSelectedRecord` renvoient les refs en **valeurs affichées**
   (expandRefs) → pour les rowIds, recharger via `fetchTable`. Réf = `{rowId, tableId}`,
   Date = `["d", epochSecondes]`. Helpers `refToId()`/`toDateJS()` dans

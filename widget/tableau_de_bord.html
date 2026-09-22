@@ -406,15 +406,18 @@
     // Initialisation
     // ------------------------------------------------------------------
     grist.ready({ columns: [] });
-    grist.onReady(load);
-
-    // Secours : si onReady ne se déclenche pas, on charge quand même après 2 s.
-    setTimeout(load, 2000);
 
     document.getElementById('refreshBtn').addEventListener('click', load);
 
-    // Rafraîchit automatiquement quand le document change (visible à l'écran,
-    // et jamais pendant qu'un chargement est déjà en cours).
+    // NB : l'API widget réelle n'a PAS grist.onReady() (elle lèverait une
+    // TypeError qui couperait le script AVANT le addEventListener ci-dessus).
+    // On se rafraîchit donc quand les données changent (onRecords) et via un
+    // timer de secours (le chargement initial après le handshake ready()).
+    grist.onRecords(() => { load(); });
+
+    setTimeout(load, 800);
+
+    // Sécurité : rechargement périodique si la page est visible et inactive.
     setInterval(() => {
       const btn = document.getElementById('refreshBtn');
       if (btn.disabled || document.hidden) { return; }
