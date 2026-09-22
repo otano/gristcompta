@@ -380,6 +380,7 @@
 
     async function load() {
       const btn = document.getElementById('refreshBtn');
+      if (btn.disabled) { return; }        // chargement déjà en cours
       btn.disabled = true;
       btn.textContent = 'Actualisation…';
       setStatus('Chargement...');
@@ -406,6 +407,9 @@
     // ------------------------------------------------------------------
     grist.ready({ columns: [] });
     grist.onReady(load);
+
+    // Secours : si onReady ne se déclenche pas, on charge quand même après 2 s.
+    setTimeout(load, 2000);
 
     document.getElementById('refreshBtn').addEventListener('click', load);
 
