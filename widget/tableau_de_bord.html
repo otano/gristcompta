@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tableau de bord</title>
+  <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --green: #16B378;
+      --dark: #1a1a1a;
+      --muted: #707070;
+      --border: #D9D9D9;
+      --bg: #fafafa;
+      --red: #b00020;
+      --blue: #2f6fed;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0; padding: 16px; background: var(--bg); color: var(--dark);
+    }
+    .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    h1 { font-size: 17px; margin: 0; }
+    .btn {
+      padding: 8px 14px; border: 1px solid var(--border); border-radius: 6px;
+      cursor: pointer; font-size: 13px; font-weight: 600; background: #fff; color: var(--dark);
+    }
+    .btn:hover { background: #f0f0f0; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }
+    .kpi {
+      border: 1px solid var(--border); border-radius: 8px; padding: 12px;
+      background: #fff; display: flex; flex-direction: column; gap: 4px;
+    }
+    .kpi .label { font-size: 11px; color: var(--muted); text-transform: uppercase; font-weight: 600; letter-spacing: .03em; }
+    .kpi .value { font-size: 20px; font-weight: 700; }
+    .kpi .sub { font-size: 11px; color: var(--muted); }
+    .kpi.green .value { color: var(--green); }
+    .kpi.blue .value { color: var(--blue); }
+    .kpi.red .value { color: var(--red); }
+    .card {
+      border: 1px solid var(--border); border-radius: 8px; padding: 14px;
+      background: #fff; margin-bottom: 14px;
+    }
+    .row { display: grid; grid-template-columns: 1fr 1.4fr; gap: 14px; align-items: start; }
+    @media (max-width: 900px) { .row { grid-template-columns: 1fr; } }
+    .card h2 { font-size: 13px; margin: 0 0 10px; color: var(--muted); font-weight: 600; text-transform: uppercase; }
+    canvas { max-height: 340px; }
+    .empty { font-size: 13px; color: var(--muted); padding: 12px 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: right; padding: 7px 8px; border-bottom: 1px solid #eee; white-space: nowrap; }
+    th:first-child, td:first-child { text-align: left; }
+    th { color: var(--muted); font-size: 11px; text-transform: uppercase; font-weight: 600; }
+    tr.total td { font-weight: 700; border-top: 2px solid var(--border); border-bottom: none; }
+    td.neg { color: var(--red); }
+    td.pos { color: var(--green); }
+    .status { font-size: 12px; color: var(--muted); margin-top: 10px; min-height: 14px; }
+    .status.error { color: var(--red); }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Tableau de bord</h1>
+    <button id="refreshBtn" class="btn">Actualiser</button>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi">
+      <span class="label">Dépensé par le Lab</span>
+      <span class="value" id="kpiDepense">&mdash;</span>
+      <span class="sub">total des dépenses</span>
+    </div>
+    <div class="kpi blue">
+      <span class="label">Facturé</span>
+      <span class="value" id="kpiFacture">&mdash;</span>
+      <span class="sub">toutes les factures</span>
+    </div>
+    <div class="kpi green">
+      <span class="label">Remboursements effectués</span>
+      <span class="value" id="kpiRembourse">&mdash;</span>
+      <span class="sub">statut « remboursee »</span>
+    </div>
+    <div class="kpi red">
+      <span class="label">Remboursements à effectuer</span>
+      <span class="value" id="kpiARembourser">&mdash;</span>
+      <span class="sub">« validee » / « a_valider »</span>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="card">
+      <h2>Part des dépenses par projet</h2>
+      <canvas id="pieChart"></canvas>
+      <div id="pieEmpty" class="empty" style="display:none;">Aucune dépense à répartir.</div>
+    </div>
+    <div class="card">
+      <h2>Détail par projet</h2>
+      <div id="tableWrap">
+        <table id="projectTable">
+          <thead>
+            <tr>
+              <th>Projet</th>
+              <th>Dépensé</th>
+              <th>Facturé</th>
+              <th>Remboursé</th>
+              <th>À rembourser</th>
+              <th>Solde</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div id="tableEmpty" class="empty" style="display:none;">Aucune donnée par projet.</div>
+    </div>
+  </div>
+
+  <div id="status" class="status"></div>
+
+  <script>
+    let chart = null;
+
+    // ------------------------------------------------------------------
+    // Helpers
+    // ------------------------------------------------------------------
+    function setStatus(msg, type) {
+      const el = document.getElementById('status');
+      el.textContent = msg;
+      el.className = 'status' + (type ? ' ' + type : '');
+    }
+
+    function fmtCurrency(v) {
+      return (v == null ? '—' : Number(v).toFixed(2) + ' €');
+    }
+
+    // Extrait le rowId d'une valeur de référence (objet {rowId,...} ou int).
+    function refToId(ref) {
+      if (ref == null || ref === 0) { return 0; }
+      if (typeof ref === 'number') { return ref; }
+      if (typeof ref === 'object' && ref.rowId != null) { return ref.rowId; }
+      return 0;
+    }
+
+    // Convertit un résultat columnar ({id: [], col: []}) en records.
+    function columnarToRecords(cols) {
+      const ids = cols.id || [];
+      const keys = Object.keys(cols).filter(k => k !== 'id');
+      return ids.map((id, i) => {
+        const rec = { id };
+        for (const k of keys) { rec[k] = (cols[k] || [])[i]; }
+        return rec;
+      });
+    }
+
+    // ------------------------------------------------------------------
+    // Données & calculs
+    // ------------------------------------------------------------------
+    async function fetchRecords(tableId) {
+      // docApi.fetchTable ignore les options (filtres) : table entière en
+      // valeurs brutes (rowIds pour les références) -> on agrège en JS.
+      return columnarToRecords(await grist.docApi.fetchTable(tableId));
+    }
+
+    function round2(x) { return Math.round((x + Number.EPSILON) * 100) / 100; }
+
+    async function compute() {
+      const [projets, depenses, documents] = await Promise.all([
+        fetchRecords('Projets'),
+        fetchRecords('Depenses'),
+        fetchRecords('Documents'),
+      ]);
+
+      const nomProjet = {};
+      for (const p of projets) { nomProjet[p.id] = p.Nom || ('#' + p.id); }
+      nomProjet[0] = 'Sans projet';
+
+      const agg = {};   // idProjet -> {depense, rembourse, aRembourser, facture}
+      const getAgg = (pid) => (agg[pid] || (agg[pid] = { depense: 0, rembourse: 0, aRembourser: 0, facture: 0 }));
+
+      for (const d of depenses) {
+        const a = getAgg(refToId(d.Projet));
+        const m = Number(d.Montant) || 0;
+        a.depense += m;
+        if (d.Statut === 'remboursee') {
+          a.rembourse += m;
+        } else {
+          a.aRembourser += m;   // validee, a_valider, ...
+        }
+      }
+
+      for (const doc of documents) {
+        if (doc.Type !== 'facture') { continue; }
+        const a = getAgg(refToId(doc.Projet));
+        a.facture += Number(doc.Total) || 0;
+      }
+
+      const rows = Object.keys(agg).map(id => ({
+        id: Number(id),
+        nom: nomProjet[id] || ('#' + id),
+        depense: round2(agg[id].depense),
+        rembourse: round2(agg[id].rembourse),
+        aRembourser: round2(agg[id].aRembourser),
+        facture: round2(agg[id].facture),
+        solde: round2(agg[id].facture - agg[id].depense),
+      })).sort((a, b) => {
+        if (a.id === 0) { return 1; }               // « Sans projet » en dernier
+        if (b.id === 0) { return -1; }
+        return b.depense - a.depense;
+      });
+
+      return rows;
+    }
+
+    // ------------------------------------------------------------------
+    // Affichage
+    // ------------------------------------------------------------------
+    const COLORS = [
+      '#16B378', '#2f6fed', '#e07800', '#8e44ad', '#c0392b', '#16a085',
+      '#2980b9', '#7f8c8d', '#d35400', '#27ae60', '#5d6d7e', '#b7950b',
+    ];
+
+    function renderPie(rows) {
+      const data = rows.filter(r => r.depense > 0);
+      const canvas = document.getElementById('pieChart');
+      const emptyEl = document.getElementById('pieEmpty');
+      const ctx = canvas.getContext('2d');
+
+      if (chart) { chart.destroy(); chart = null; }
+      if (data.length === 0) {
+        canvas.style.display = 'none';
+        emptyEl.style.display = 'block';
+        return;
+      }
+      canvas.style.display = 'block';
+      emptyEl.style.display = 'none';
+
+      chart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: data.map(r => r.nom),
+          datasets: [{
+            data: data.map(r => r.depense),
+            backgroundColor: data.map((r, i) => COLORS[i % COLORS.length]),
+            borderWidth: 2,
+            borderColor: '#fff',
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                boxWidth: 12,
+                font: { size: 11 },
+                generateLabels: (c) => {
+                  const ds = c.data.datasets[0];
+                  const total = ds.data.reduce((s, v) => s + v, 0);
+                  return c.data.labels.map((label, i) => ({
+                    text: label + ' — ' + fmtCurrency(ds.data[i]) +
+                          ' (' + (total ? Math.round(ds.data[i] / total * 100) : 0) + ' %)',
+                    fillStyle: ds.backgroundColor[i],
+                    strokeStyle: ds.backgroundColor[i],
+                    hidden: false,
+                    index: i,
+                  }));
+                },
+              },
+            },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => {
+                  const total = ctx.dataset.data.reduce((s, v) => s + v, 0);
+                  const pct = total ? Math.round(ctx.parsed / total * 100) : 0;
+                  return ' ' + fmtCurrency(ctx.parsed) + ' (' + pct + ' %)';
+                },
+              },
+            },
+          },
+        },
+        plugins: [{
+          id: 'centerText',
+          afterDraw: (chart) => {
+            const { ctx, chartArea } = chart;
+            const total = chart.data.datasets[0].data.reduce((s, v) => s + v, 0);
+            if (!chartArea) { return; }
+            const cx = (chartArea.left + chartArea.right) / 2;
+            const cy = (chartArea.top + chartArea.bottom) / 2;
+            ctx.save();
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#1a1a1a';
+            ctx.font = '700 20px -apple-system, sans-serif';
+            ctx.fillText(fmtCurrency(total).replace('.00', ''), cx, cy - 6);
+            ctx.fillStyle = '#707070';
+            ctx.font = '11px -apple-system, sans-serif';
+            ctx.fillText('dépensé', cx, cy + 14);
+            ctx.restore();
+          },
+        }],
+      });
+    }
+
+    function renderTable(rows) {
+      const tbody = document.querySelector('#projectTable tbody');
+      const tableWrap = document.getElementById('tableWrap');
+      const emptyEl = document.getElementById('tableEmpty');
+      tbody.innerHTML = '';
+
+      if (rows.length === 0) {
+        tableWrap.style.display = 'none';
+        emptyEl.style.display = 'block';
+        return;
+      }
+      tableWrap.style.display = 'block';
+      emptyEl.style.display = 'none';
+
+      const totals = { depense: 0, facture: 0, rembourse: 0, aRembourser: 0, solde: 0 };
+
+      for (const r of rows) {
+        totals.depense += r.depense;
+        totals.facture += r.facture;
+        totals.rembourse += r.rembourse;
+        totals.aRembourser += r.aRembourser;
+        totals.solde += r.solde;
+
+        const tr = document.createElement('tr');
+        tr.innerHTML =
+          '<td>' + escapeHtml(r.nom) + '</td>' +
+          '<td>' + fmtCurrency(r.depense) + '</td>' +
+          '<td>' + fmtCurrency(r.facture) + '</td>' +
+          '<td>' + fmtCurrency(r.rembourse) + '</td>' +
+          '<td>' + fmtCurrency(r.aRembourser) + '</td>' +
+          '<td class="' + (r.solde < 0 ? 'neg' : 'pos') + '">' + fmtCurrency(r.solde) + '</td>';
+        tbody.appendChild(tr);
+      }
+
+      const trTotal = document.createElement('tr');
+      trTotal.className = 'total';
+      trTotal.innerHTML =
+        '<td>Total</td>' +
+        '<td>' + fmtCurrency(totals.depense) + '</td>' +
+        '<td>' + fmtCurrency(totals.facture) + '</td>' +
+        '<td>' + fmtCurrency(totals.rembourse) + '</td>' +
+        '<td>' + fmtCurrency(totals.aRembourser) + '</td>' +
+        '<td class="' + (totals.solde < 0 ? 'neg' : 'pos') + '">' + fmtCurrency(totals.solde) + '</td>';
+      tbody.appendChild(trTotal);
+
+      document.getElementById('kpiDepense').textContent = fmtCurrency(totals.depense);
+      document.getElementById('kpiFacture').textContent = fmtCurrency(totals.facture);
+      document.getElementById('kpiRembourse').textContent = fmtCurrency(totals.rembourse);
+      document.getElementById('kpiARembourser').textContent = fmtCurrency(totals.aRembourser);
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, (c) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+      }[c]));
+    }
+
+    async function load() {
+      const btn = document.getElementById('refreshBtn');
+      btn.disabled = true;
+      setStatus('Chargement...');
+      try {
+        const rows = await compute();
+        renderTable(rows);
+        renderPie(rows);
+        setStatus(rows.length === 0
+          ? 'Aucune donnée (dépenses ou factures).'
+          : 'Données à jour.');
+      } catch (err) {
+        console.error(err);
+        setStatus('Erreur : ' + (err.message || err), 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    // ------------------------------------------------------------------
+    // Initialisation
+    // ------------------------------------------------------------------
+    grist.ready({ columns: [] });
+    grist.onReady(load);
+
+    document.getElementById('refreshBtn').addEventListener('click', load);
+  </script>
+</body>
+</html>

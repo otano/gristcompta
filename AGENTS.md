@@ -42,6 +42,11 @@ qui configurent un document en ligne + un widget statique autonome.
    → settings → widgets → fiche → consolider.
 4. `configurer_widget.py` (facture depuis devis) et `configurer_widget_pdf.py`
    (sections « Aperçu · PDF » dans les vues Devis + Factures).
+   `configurer_tableau_de_bord.py` — page « Tableau de bord » : widget seul
+   (vue dédiée sur Projets, grille par défaut retirée) qui agrège par projet
+   dépenses / parts (camembert) / facturé / remboursements (effectués = Statut
+   `remboursee`, à effectuer = `validee`/`a_valider`). Tout l'historique, pas de
+   filtre temporel.
    `configurer_vue_creation_devis.py` — page « Créer un devis » : Card seul
    (`single` = c'est la Card unique qui affiche navigation ◂▸ + bouton « + »,
    pas la Card List `detail`) filtré Type=devis + grille `Lignes_Document`
@@ -53,10 +58,12 @@ qui configurent un document en ligne + un widget statique autonome.
 5. `widget/` — fichiers HTML autonomes (grist-plugin-api.js) ; pas servis par Grist.
    Hébergés sur GitHub Pages : pousser sur `main` déploie (build auto). URL :
    `https://otano.github.io/gristcompta/widget/...`.
-   `generer_pdf.html` lit `Documents/Lignes_Document/Personnes/Settings` et exporte
-   en PDF via `window.print()` + `@media print` (note « association non assujettie
-   à la TVA », règlement virement IBAN/BIC) ; `creer_facture.html` duplique un
-   devis en facture (lot atomique, réf négative).
+`generer_pdf.html` lit `Documents/Lignes_Document/Personnes/Settings` et exporte
+    en PDF via `window.print()` + `@media print` (note « association non assujettie
+    à la TVA », règlement virement IBAN/BIC) ; `creer_facture.html` duplique un
+    devis en facture (lot atomique, réf négative) ; `tableau_de_bord.html` lit
+    `Projets/Depenses/Documents` et rend KPIs + camembert part des dépenses par
+    projet + tableau par projet (Chart.js via CDN).
 
 ## Pièges API Grist (durs à deviner, cf. git log)
 

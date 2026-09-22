@@ -19,6 +19,7 @@ Les scripts suivants configurent le document Grist de manière **idempotente**
 | `numerotation.py` | Configure la numérotation automatique `DEV-AAAA-NNN` / `FAC-AAAA-NNN` (par année et par type). |
 | `configurer_widget.py` | Ajoute/config la section custom « Créer une facture depuis un devis » dans la vue Devis. |
 | `configurer_widget_pdf.py` | Ajoute les sections « Aperçu · PDF » dans les vues Devis et Factures. |
+| `configurer_tableau_de_bord.py` | Crée la page « Tableau de bord » (widget seul) : dépenses, part par projet (camembert), facturé et remboursements (effectués / à effectuer), par projet. |
 
 Le widget lui-même se trouve dans `widget/creer_facture.html` (fichier autonome
 utilisant la Grist widget API) — voir `widget/README.md`.
