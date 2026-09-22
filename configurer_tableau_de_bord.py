@@ -11,6 +11,7 @@ jour (et la grille par défaut est retirée si elle traîne encore).
 
 import os
 import json
+import hashlib
 import requests
 
 TOKEN = os.environ["GRIST_API_TOKEN"]
@@ -19,10 +20,26 @@ BASE_URL = os.environ["GRIST_BASE_URL"]
 H = {"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json"}
 
 # URL publique où est hébergé widget/tableau_de_bord.html.
-WIDGET_URL = os.environ.get(
+WIDGET_BASE_URL = os.environ.get(
     "GRIST_WIDGET_URL_DASHBOARD",
     "https://otano.github.io/gristcompta/widget/tableau_de_bord.html",
 )
+
+
+def widget_url():
+    """URL du widget versionnée par le contenu du fichier.
+
+    L'iframe Grist cache la page : à chaque modification du widget l'URL change
+    (?v=hash), ce qui force le rechargement de la nouvelle version dans Grist.
+    """
+    widgets = os.path.join(os.path.dirname(os.path.abspath(__file__)), "widget", "tableau_de_bord.html")
+    try:
+        with open(widgets, "rb") as fh:
+            version = hashlib.sha1(fh.read()).hexdigest()[:10]
+    except OSError:
+        version = "1"
+    return f"{WIDGET_BASE_URL}?v={version}"
+
 
 VIEW_NAME = "Tableau de bord"
 SECTION_TITLE = "Tableau de bord"
@@ -123,26 +140,26 @@ def ensure_dashboard_page():
         print(f"ℹ️  Section custom existante (section={section_id}), mise à jour de l'URL.")
         apply([[
             "UpdateRecord", "_grist_Views_section", section_id,
-            {"title": SECTION_TITLE, "options": json.dumps(custom_options(WIDGET_URL))},
+            {"title": SECTION_TITLE, "options": json.dumps(custom_options(widget_url()))},
         ]])
     else:
         result = apply([["AddViewSection", SECTION_TITLE, "custom", view_id, "Projets"]])
         section_id = result["retValues"][0]["id"]
         apply([[
             "UpdateRecord", "_grist_Views_section", section_id,
-            {"title": SECTION_TITLE, "options": json.dumps(custom_options(WIDGET_URL))},
+            {"title": SECTION_TITLE, "options": json.dumps(custom_options(widget_url()))},
         ]])
         print(f"✅ Section custom '{SECTION_TITLE}' créée (section={section_id}).")
 
     remove_grid_section(view_id)
-    print(f"✅ Widget configuré : {WIDGET_URL}")
+    print(f"✅ Widget configuré : {widget_url()}")
 
 
 def main():
     print("=" * 60)
     print("📊 Configuration de la page « Tableau de bord »")
     print("=" * 60)
-    print(f"URL du widget : {WIDGET_URL}\n")
+    print(f"URL du widget : {widget_url()}\n")
 
     ensure_dashboard_page()
 

@@ -235,6 +235,13 @@
       if (data.length === 0) {
         canvas.style.display = 'none';
         emptyEl.style.display = 'block';
+        emptyEl.textContent = 'Aucune dépense à répartir.';
+        return;
+      }
+      if (typeof Chart === 'undefined') {
+        canvas.style.display = 'none';
+        emptyEl.style.display = 'block';
+        emptyEl.textContent = 'Graphique indisponible (Chart.js non chargé — vérifiez le réseau/CDN).';
         return;
       }
       canvas.style.display = 'block';
