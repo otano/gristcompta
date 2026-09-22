@@ -21,8 +21,10 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       margin: 0; padding: 16px; background: var(--bg); color: var(--dark);
     }
-    .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
     h1 { font-size: 17px; margin: 0; }
+    .header-right { display: flex; align-items: center; gap: 10px; }
+    .last-update { font-size: 11px; color: var(--muted); white-space: nowrap; }
     .btn {
       padding: 8px 14px; border: 1px solid var(--border); border-radius: 6px;
       cursor: pointer; font-size: 13px; font-weight: 600; background: #fff; color: var(--dark);
@@ -63,7 +65,10 @@
 <body>
   <div class="header">
     <h1>Tableau de bord</h1>
-    <button id="refreshBtn" class="btn">Actualiser</button>
+    <div class="header-right">
+      <span id="lastUpdate" class="last-update"></span>
+      <button id="refreshBtn" class="btn">Actualiser</button>
+    </div>
   </div>
 
   <div class="kpis">
@@ -360,14 +365,23 @@
       }[c]));
     }
 
+    function fmtTime(d) {
+      return String(d.getHours()).padStart(2, '0') + ':' +
+             String(d.getMinutes()).padStart(2, '0') + ':' +
+             String(d.getSeconds()).padStart(2, '0');
+    }
+
     async function load() {
       const btn = document.getElementById('refreshBtn');
       btn.disabled = true;
+      btn.textContent = 'Actualisation…';
       setStatus('Chargement...');
       try {
         const rows = await compute();
         renderTable(rows);
         renderPie(rows);
+        const now = fmtTime(new Date());
+        document.getElementById('lastUpdate').textContent = 'Dernière actualisation : ' + now;
         setStatus(rows.length === 0
           ? 'Aucune donnée (dépenses ou factures).'
           : 'Données à jour.');
@@ -375,6 +389,7 @@
         console.error(err);
         setStatus('Erreur : ' + (err.message || err), 'error');
       } finally {
+        btn.textContent = 'Actualiser';
         btn.disabled = false;
       }
     }
@@ -386,6 +401,14 @@
     grist.onReady(load);
 
     document.getElementById('refreshBtn').addEventListener('click', load);
+
+    // Rafraîchit automatiquement quand le document change (visible à l'écran,
+    // et jamais pendant qu'un chargement est déjà en cours).
+    setInterval(() => {
+      const btn = document.getElementById('refreshBtn');
+      if (btn.disabled || document.hidden) { return; }
+      load();
+    }, 60000);
   </script>
 </body>
 </html>
